@@ -5,7 +5,7 @@ import type { SkypeExport } from "../types/messages";
 
 /**
  * Passes deep links, and with the user's approval the loaded export, between
- * SkypeLens tabs of the same origin.
+ * ChatLens tabs of the same origin.
  *
  * A deep link opened in a fresh tab has no export loaded (nothing is persisted).
  * The fresh tab offers the link on a BroadcastChannel, and the first tab whose export
@@ -42,7 +42,7 @@ export type ExportCopyFailure =
   | "unavailable"
   | "not-found";
 
-/** Progress of copying an export from another SkypeLens tab into this one. */
+/** Progress of copying an export from another ChatLens tab into this one. */
 export type ExportCopyState =
   | { phase: "awaiting-approval"; code: string }
   | { phase: "copying" }

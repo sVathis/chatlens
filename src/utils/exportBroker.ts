@@ -2,7 +2,7 @@ import { isDeepLinkTarget, type DeepLinkTarget } from "./deepLink";
 import { randomId } from "./random";
 
 /**
- * Connects two SkypeLens tabs privately, so one can send its export to the other.
+ * Connects two ChatLens tabs privately, so one can send its export to the other.
  *
  * BroadcastChannel can't do this: every same-origin context that opens a channel name
  * receives everything posted on it. Instead, every tab connects to one SharedWorker

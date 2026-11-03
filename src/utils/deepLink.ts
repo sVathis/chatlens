@@ -82,7 +82,7 @@ function isLinkParam(queryPart: string): boolean {
  * links work on any host, port or sub-path (e.g. GitHub Pages).
  *
  * Unrelated query parameters are kept byte for byte (not re-serialized through
- * URLSearchParams, which would turn `%20` into `+`). tools/skypelens_links.py applies
+ * URLSearchParams, which would turn `%20` into `+`). tools/chatlens_links.py applies
  * the same rule, so a report link and this tab's URL match before the `#` and following
  * the link doesn't reload the page.
  */
@@ -100,7 +100,7 @@ export function getAppBaseUrl(href: string = window.location.href): string {
 /**
  * Builds the canonical deep-link URL for a conversation or message:
  * `<base>#conversationId=…&messageId=…`. Keeping the identifiers in the hash means
- * following a link in an open SkypeLens tab changes only the hash, so the browser
+ * following a link in an open ChatLens tab changes only the hash, so the browser
  * does not reload the page and the loaded export stays in memory.
  * Only identifiers are placed in the URL, never message content.
  */

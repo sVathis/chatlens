@@ -345,6 +345,6 @@ export const useSelectConversation = () =>
 // Lets the browser tests (e2e/) inspect the loaded export. Development server only:
 // import.meta.env.DEV is false in production builds, which drop this.
 if (import.meta.env.DEV && typeof window !== "undefined") {
-  (window as Window & { __SKYPELENS_STORE__?: typeof useMessageStore }).__SKYPELENS_STORE__ =
+  (window as Window & { __CHATLENS_STORE__?: typeof useMessageStore }).__CHATLENS_STORE__ =
     useMessageStore;
 }

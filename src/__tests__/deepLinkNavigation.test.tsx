@@ -85,7 +85,7 @@ const rowOf = (messageId: string) =>
   document
     .querySelector(`[data-message-id="${messageId}"]`)
     ?.closest<HTMLElement>("[data-index]") ?? null;
-const highlighted = () => document.querySelector<HTMLElement>(".skypelens-deeplink-target");
+const highlighted = () => document.querySelector<HTMLElement>(".chatlens-deeplink-target");
 const text = () => document.body.textContent ?? "";
 
 async function waitForNavigation(messageId: string) {
@@ -142,7 +142,7 @@ describe("deep-link navigation in the message view", () => {
     await waitForNavigation(messageIdFor(n));
 
     expect(highlighted()?.dataset.messageId).toBe(messageIdFor(n));
-    expect(highlighted()?.className).toContain("skypelens-deeplink-flash");
+    expect(highlighted()?.className).toContain("chatlens-deeplink-flash");
     expectCentered(messageIdFor(n));
     // Surrounding conversation is rendered on both sides
     for (const neighbour of [n - 4, n - 1, n + 1, n + 4]) {
@@ -171,7 +171,7 @@ describe("deep-link navigation in the message view", () => {
     expect(highlighted()?.dataset.messageId).toBe(messageIdFor(COUNT - 1));
     expectCentered(messageIdFor(COUNT - 1));
     // Only one message is highlighted at a time
-    expect(document.querySelectorAll(".skypelens-deeplink-target")).toHaveLength(1);
+    expect(document.querySelectorAll(".chatlens-deeplink-target")).toHaveLength(1);
 
     window.history.back();
     await waitForNavigation(messageIdFor(0));
@@ -188,7 +188,7 @@ describe("deep-link navigation in the message view", () => {
 
     for (const n of [7_000, 1_500]) {
       const requestsBefore = store().navigationRequestCount;
-      // What the browser does when a target="skypelens" link points at this tab and
+      // What the browser does when a target="chatlens" link points at this tab and
       // differs only after the "#": a same-document navigation, no reload
       window.location.hash = new URL(linkTo(n)).hash;
       await waitForNavigation(messageIdFor(n));
@@ -329,7 +329,7 @@ describe("deep-link navigation in the message view", () => {
     await waitForNavigation(special.albumId);
     const row = highlighted();
     expect(row?.dataset.messageId).not.toBe(special.albumId);
-    expect(row?.className).toContain("skypelens-deeplink-approximate");
+    expect(row?.className).toContain("chatlens-deeplink-approximate");
     expect(text()).toContain('"RichText/Media_Album") is not displayed');
   });
 

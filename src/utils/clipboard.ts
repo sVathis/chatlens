@@ -1,6 +1,6 @@
 /**
  * Copies text to the clipboard. Falls back to a hidden textarea when the async
- * Clipboard API is unavailable (e.g. SkypeLens served over plain HTTP on a LAN address).
+ * Clipboard API is unavailable (e.g. ChatLens served over plain HTTP on a LAN address).
  */
 export async function copyText(text: string): Promise<boolean> {
   try {

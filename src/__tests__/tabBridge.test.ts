@@ -166,7 +166,7 @@ type Approve = (
 
 let tabCount = 0;
 
-/** A SkypeLens tab with the copy feature: on the shared channel and the broker. */
+/** A ChatLens tab with the copy feature: on the shared channel and the broker. */
 function transferTab(
   bus: ReturnType<typeof createBus>,
   network: ReturnType<typeof createBrokerNetwork>,

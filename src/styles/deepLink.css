@@ -1,62 +1,62 @@
 /* Deep-link target highlight and per-message "copy link" action */
 
 :root {
-  --skypelens-deeplink-bg: rgba(255, 184, 0, 0.12);
-  --skypelens-deeplink-bg-strong: rgba(255, 184, 0, 0.42);
-  --skypelens-deeplink-border: rgba(214, 140, 0, 0.9);
+  --chatlens-deeplink-bg: rgba(255, 184, 0, 0.12);
+  --chatlens-deeplink-bg-strong: rgba(255, 184, 0, 0.42);
+  --chatlens-deeplink-border: rgba(214, 140, 0, 0.9);
 }
 
 [data-mantine-color-scheme="dark"] {
-  --skypelens-deeplink-bg: rgba(255, 200, 70, 0.1);
-  --skypelens-deeplink-bg-strong: rgba(255, 200, 70, 0.32);
-  --skypelens-deeplink-border: rgba(255, 200, 70, 0.75);
+  --chatlens-deeplink-bg: rgba(255, 200, 70, 0.1);
+  --chatlens-deeplink-bg-strong: rgba(255, 200, 70, 0.32);
+  --chatlens-deeplink-border: rgba(255, 200, 70, 0.75);
 }
 
 /* Insets instead of borders so the highlight never changes the measured row height */
-.skypelens-deeplink-target {
-  background-color: var(--skypelens-deeplink-bg);
-  box-shadow: inset 3px 0 0 var(--skypelens-deeplink-border);
+.chatlens-deeplink-target {
+  background-color: var(--chatlens-deeplink-bg);
+  box-shadow: inset 3px 0 0 var(--chatlens-deeplink-border);
 }
 
-.skypelens-deeplink-approximate {
-  outline: 1px dashed var(--skypelens-deeplink-border);
+.chatlens-deeplink-approximate {
+  outline: 1px dashed var(--chatlens-deeplink-border);
   outline-offset: -1px;
 }
 
-.skypelens-deeplink-flash {
-  animation: skypelens-deeplink-flash 1.6s ease-out 1;
+.chatlens-deeplink-flash {
+  animation: chatlens-deeplink-flash 1.6s ease-out 1;
 }
 
-@keyframes skypelens-deeplink-flash {
+@keyframes chatlens-deeplink-flash {
   0%,
   35% {
-    background-color: var(--skypelens-deeplink-bg-strong);
+    background-color: var(--chatlens-deeplink-bg-strong);
   }
   100% {
-    background-color: var(--skypelens-deeplink-bg);
+    background-color: var(--chatlens-deeplink-bg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skypelens-deeplink-flash {
+  .chatlens-deeplink-flash {
     animation-duration: 1ms;
   }
 }
 
-.skypelens-copy-link {
+.chatlens-copy-link {
   opacity: 0;
   transition: opacity 120ms ease;
   z-index: 1;
 }
 
-.skypelens-message-row:hover .skypelens-copy-link,
-.skypelens-copy-link:focus-visible,
-.skypelens-copy-link[data-active] {
+.chatlens-message-row:hover .chatlens-copy-link,
+.chatlens-copy-link:focus-visible,
+.chatlens-copy-link[data-active] {
   opacity: 1;
 }
 
 @media (hover: none) {
-  .skypelens-copy-link {
+  .chatlens-copy-link {
     opacity: 0.55;
   }
 }

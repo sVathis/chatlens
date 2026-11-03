@@ -47,7 +47,7 @@ export function CopyMessageLinkButton({
   return (
     <Tooltip label={label} opened={status !== "idle" ? true : undefined} withArrow position="top">
       <ActionIcon
-        className="skypelens-copy-link"
+        className="chatlens-copy-link"
         data-active={status !== "idle" || undefined}
         variant="subtle"
         color={status === "failed" ? "red" : status === "copied" ? "teal" : "gray"}

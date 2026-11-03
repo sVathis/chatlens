@@ -40,7 +40,7 @@ interface MessageListProps {
   onCopyMessageLink?: (messageId: string) => Promise<boolean>;
 }
 
-const DEEP_LINK_FLASH_ANIMATION = "skypelens-deeplink-flash";
+const DEEP_LINK_FLASH_ANIMATION = "chatlens-deeplink-flash";
 
 export function MessageList({
   messages,
@@ -228,12 +228,12 @@ export function MessageList({
                   data-message-id={message.id}
                   data-deeplink-target={isDeepLinkTarget || undefined}
                   className={[
-                    "skypelens-message-row",
-                    isDeepLinkTarget && "skypelens-deeplink-target",
+                    "chatlens-message-row",
+                    isDeepLinkTarget && "chatlens-deeplink-target",
                     isDeepLinkTarget &&
                       deepLinkHighlight.approximate &&
-                      "skypelens-deeplink-approximate",
-                    isFlashing && "skypelens-deeplink-flash",
+                      "chatlens-deeplink-approximate",
+                    isFlashing && "chatlens-deeplink-flash",
                   ]
                     .filter(Boolean)
                     .join(" ")}

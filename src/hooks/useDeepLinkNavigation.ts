@@ -12,6 +12,7 @@ import { connectExportBroker } from "../utils/connectExportBroker";
 import { randomId } from "../utils/random";
 import {
   CONVERSATION_ID_PARAM,
+  LEGACY_REPORT_TAB_NAME,
   REPORT_TAB_NAME,
   TAB_BRIDGE_CHANNEL,
 } from "../constants/deepLink";
@@ -42,7 +43,7 @@ function pushUrl(url: string) {
 
 /**
  * Applies the deep link in a URL to the store. Runs on start-up, on browser
- * Back/Forward and when a link changes the hash of an open SkypeLens tab.
+ * Back/Forward and when a link changes the hash of an open ChatLens tab.
  */
 export function applyLocationToStore(location: DeepLinkLocation = window.location) {
   const { requestNavigation, clearNavigation, setNavigationError } =
@@ -85,7 +86,7 @@ export interface ExportApprovalRequest {
 
 /**
  * Keeps the URL and the store in sync and passes links (or, with the user's approval,
- * a copy of the export to the report's tab) between SkypeLens tabs. Returns:
+ * a copy of the export to the report's tab) between ChatLens tabs. Returns:
  * - `forwardedTarget`: the deep link this tab handed over to another tab, while it has
  *   no export;
  * - `exportCopy`: progress of an export copy this tab asked for, while it has none;
@@ -160,7 +161,8 @@ export function useDeepLinkNavigation(): {
             // Only the tab report.html links go to asks for a copy: the report keeps
             // reusing it. Other fresh tabs (report.md links, pasted links) hand the link
             // over instead of adding another copy of the export each.
-            wantsExport: () => window.name === REPORT_TAB_NAME,
+            wantsExport: () =>
+              window.name === REPORT_TAB_NAME || window.name === LEGACY_REPORT_TAB_NAME,
             getExport: () => useMessageStore.getState().exportData,
             exportHas: (data, target) => canShowDeepLink(data.conversations, target),
             approve: (request, signal) =>

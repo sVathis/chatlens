@@ -1,14 +1,19 @@
-"""Tests for tools/skypelens_links.py. Run: python -m unittest discover tools"""
+"""Tests for tools/chatlens_links.py. Run: python -m unittest discover tools"""
 
+import argparse
 import json
+import os
 import unittest
 from pathlib import Path
+from unittest import mock
 from urllib.parse import parse_qs, urlsplit
 
-from skypelens_links import (
-    DEFAULT_SKYPELENS_BASE_URL,
-    add_skypelens_links,
-    build_skypelens_url,
+import chatlens_links
+import skypelens_links
+from chatlens_links import (
+    DEFAULT_CHATLENS_BASE_URL,
+    add_chatlens_links,
+    build_chatlens_url,
     finding_links_html,
     finding_links_markdown,
     normalize_base_url,
@@ -22,10 +27,10 @@ CONTRACT = json.loads(
 
 class BuildUrlTests(unittest.TestCase):
     def test_matches_shared_contract(self):
-        self.assertEqual(CONTRACT["default_base_url"], DEFAULT_SKYPELENS_BASE_URL)
+        self.assertEqual(CONTRACT["default_base_url"], DEFAULT_CHATLENS_BASE_URL)
         for case in CONTRACT["cases"]:
             with self.subTest(case=case):
-                url = build_skypelens_url(
+                url = build_chatlens_url(
                     case["conversation_id"], case["message_id"], case["base_url"]
                 )
                 self.assertEqual(url, case["url"])
@@ -37,7 +42,7 @@ class BuildUrlTests(unittest.TestCase):
             ("8:live:a+b c", "&=#?%/"),
         ]:
             with self.subTest(conv_id=conv_id, msg_id=msg_id):
-                url = urlsplit(build_skypelens_url(conv_id, msg_id))
+                url = urlsplit(build_chatlens_url(conv_id, msg_id))
                 self.assertEqual(url.query, "")
                 params = parse_qs(url.fragment)
                 self.assertEqual(params["conversationId"], [conv_id])
@@ -45,19 +50,19 @@ class BuildUrlTests(unittest.TestCase):
 
     def test_rejects_invalid_input(self):
         with self.assertRaises(ValueError):
-            build_skypelens_url("", "1")
+            build_chatlens_url("", "1")
         with self.assertRaises(ValueError):
-            build_skypelens_url("8:live:a", "")
+            build_chatlens_url("8:live:a", "")
         with self.assertRaises(ValueError):
-            build_skypelens_url("8:live:a", "1", "localhost:5173")
+            build_chatlens_url("8:live:a", "1", "localhost:5173")
 
     def test_replaces_existing_link_parameters(self):
-        url = build_skypelens_url("new", "2", "http://h/?conversationId=old&messageId=1&x=y#old")
+        url = build_chatlens_url("new", "2", "http://h/?conversationId=old&messageId=1&x=y#old")
         self.assertEqual(url, "http://h/?x=y#conversationId=new&messageId=2")
 
 
 class NormalizeBaseUrlTests(unittest.TestCase):
-    # The result must equal what SkypeLens' own tab shows before the "#", or following
+    # The result must equal what ChatLens' own tab shows before the "#", or following
     # a report link reloads the tab (see getAppBaseUrl in src/utils/deepLink.ts)
 
     def test_keeps_query_bytes(self):
@@ -68,7 +73,7 @@ class NormalizeBaseUrlTests(unittest.TestCase):
 
     def test_matches_browser_normalization(self):
         for base, expected in [
-            ("HTTPS://Example.GitHub.io:443/skypelens/", "https://example.github.io/skypelens/"),
+            ("HTTPS://Example.GitHub.io:443/chatlens/", "https://example.github.io/chatlens/"),
             ("http://[::1]:5173", "http://[::1]:5173/"),
             ("http://h/a b/?x=a b&y='z'", "http://h/a%20b/?x=a%20b&y=%27z%27"),
             (" http://10.0.0.10:5173/ ", "http://10.0.0.10:5173/"),
@@ -122,26 +127,26 @@ class ReportLinkTests(unittest.TestCase):
         }
 
     def test_add_links_keeps_history_fallback(self):
-        [finding] = add_skypelens_links([self.finding()], "8:live:a")
+        [finding] = add_chatlens_links([self.finding()], "8:live:a")
         self.assertEqual(
-            finding["skypelens_url"],
+            finding["chatlens_url"],
             "http://localhost:5173/#conversationId=8%3Alive%3Aa&messageId=1700000000001",
         )
         self.assertEqual(finding["source_url"], "history.html#m0000123")
-        self.assertNotIn("synthetic", finding["skypelens_url"])
+        self.assertNotIn("synthetic", finding["chatlens_url"])
 
     def test_missing_skype_id_gets_no_link(self):
         finding = self.finding()
         del finding["skype_id"]
-        [finding] = add_skypelens_links([finding], "8:live:a")
-        self.assertIsNone(finding["skypelens_url"])
+        [finding] = add_chatlens_links([finding], "8:live:a")
+        self.assertIsNone(finding["chatlens_url"])
         self.assertEqual(finding_links_markdown(finding), "[history.html](history.html#m0000123)")
 
     def test_html_links(self):
-        [finding] = add_skypelens_links([self.finding()], "8:live:a", "https://x.github.io/skypelens/")
+        [finding] = add_chatlens_links([self.finding()], "8:live:a", "https://x.github.io/chatlens/")
         rendered = finding_links_html(finding)
         self.assertIn(
-            '<a class="skypelens-link" href="https://x.github.io/skypelens/#conversationId=8%3Alive%3Aa&amp;messageId=1700000000001" target="skypelens">View in SkypeLens</a>',
+            '<a class="chatlens-link" href="https://x.github.io/chatlens/#conversationId=8%3Alive%3Aa&amp;messageId=1700000000001" target="chatlens">View in ChatLens</a>',
             rendered,
         )
         # Either would make the browser open a new tab per click instead of reusing one
@@ -150,12 +155,60 @@ class ReportLinkTests(unittest.TestCase):
         self.assertIn('<a class="history-link" href="history.html#m0000123">history.html</a>', rendered)
 
     def test_markdown_links(self):
-        [finding] = add_skypelens_links([self.finding()], "8:live:a")
+        [finding] = add_chatlens_links([self.finding()], "8:live:a")
         self.assertEqual(
             finding_links_markdown(finding),
-            "[View in SkypeLens](http://localhost:5173/#conversationId=8%3Alive%3Aa&messageId=1700000000001)"
+            "[View in ChatLens](http://localhost:5173/#conversationId=8%3Alive%3Aa&messageId=1700000000001)"
             " · [history.html](history.html#m0000123)",
         )
+
+
+class LegacyNameTests(unittest.TestCase):
+    """What scripts and reports made when the project was called SkypeLens still use."""
+
+    def test_old_env_var_is_still_read(self):
+        with mock.patch.dict(os.environ, {"SKYPELENS_BASE_URL": "http://old.example/"}):
+            os.environ.pop("CHATLENS_BASE_URL", None)
+            self.assertEqual(chatlens_links.default_base_url(), "http://old.example/")
+            os.environ["CHATLENS_BASE_URL"] = "http://new.example/"
+            self.assertEqual(chatlens_links.default_base_url(), "http://new.example/")
+
+    def test_old_findings_field_still_renders(self):
+        finding = {"skypelens_url": "http://localhost:5173/#conversationId=a&messageId=1"}
+        self.assertIn('target="chatlens">View in ChatLens</a>', finding_links_html(finding))
+        self.assertIn("[View in ChatLens](http://localhost:5173/", finding_links_markdown(finding))
+
+    def test_old_module_exposes_the_old_names(self):
+        self.assertEqual(
+            skypelens_links.build_skypelens_url("8:live:a", "1"),
+            build_chatlens_url("8:live:a", "1"),
+        )
+        self.assertEqual(skypelens_links.DEFAULT_SKYPELENS_BASE_URL, DEFAULT_CHATLENS_BASE_URL)
+        self.assertEqual(skypelens_links.SKYPELENS_BASE_URL_ENV, "SKYPELENS_BASE_URL")
+        # The tab the app looks for, whatever the old constant is called
+        self.assertEqual(skypelens_links.SKYPELENS_WINDOW_NAME, "chatlens")
+        self.assertIs(skypelens_links.finding_links_html, finding_links_html)
+
+    def test_old_add_links_stores_both_fields(self):
+        [finding] = skypelens_links.add_skypelens_links(
+            [{"skype_id": "1700000000001"}], "8:live:a"
+        )
+        self.assertEqual(finding["skypelens_url"], finding["chatlens_url"])
+        self.assertIn("#conversationId=8%3Alive%3Aa&messageId=1700000000001", finding["skypelens_url"])
+
+    def test_old_cli_arguments_keep_their_attribute_names(self):
+        parser = argparse.ArgumentParser()
+        skypelens_links.add_cli_arguments(parser)
+        args = parser.parse_args(["--skypelens-base-url", "http://a/", "--chatlens-conversation-id", "c"])
+        self.assertEqual(args.skypelens_base_url, "http://a/")
+        self.assertEqual(args.skypelens_conversation_id, "c")
+
+    def test_new_cli_arguments_accept_the_old_flags(self):
+        parser = argparse.ArgumentParser()
+        chatlens_links.add_cli_arguments(parser)
+        args = parser.parse_args(["--skypelens-base-url", "http://a/", "--skypelens-conversation-id", "c"])
+        self.assertEqual(args.chatlens_base_url, "http://a/")
+        self.assertEqual(args.chatlens_conversation_id, "c")
 
 
 if __name__ == "__main__":

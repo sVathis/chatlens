@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
-import { SKYPELENS_E2E_BASE_URL } from "../playwright.config";
+import { CHATLENS_E2E_BASE_URL } from "../playwright.config";
 import type { DeepLinkTarget } from "../src/utils/deepLink";
 import type { SkypeExport } from "../src/types/messages";
 import {
@@ -48,7 +48,7 @@ async function writeExportFolder(testInfo: TestInfo): Promise<string> {
     });
   };
   replace(PHOTO_MESSAGE, "RichText/UriObject", PHOTO_ID, "synthetic-photo.png");
-  // Not an image or video: SkypeLens shows it as a link that downloads the file
+  // Not an image or video: ChatLens shows it as a link that downloads the file
   replace(FILE_MESSAGE, "RichText/UriObject", FILE_ID, "synthetic-notes.pdf");
 
   const folder = testInfo.outputPath("export");
@@ -67,7 +67,7 @@ async function writeExportFolder(testInfo: TestInfo): Promise<string> {
 function mediaFiles(page: Page) {
   return page.evaluate(async () => {
     type Store = { getState: () => { exportData: SkypeExport | null } };
-    const store = (window as unknown as { __SKYPELENS_STORE__: Store }).__SKYPELENS_STORE__;
+    const store = (window as unknown as { __CHATLENS_STORE__: Store }).__CHATLENS_STORE__;
     const files = store.getState().exportData?.mediaFiles ?? new Map<string, File>();
     return Promise.all(
       [...files].map(async ([key, file]) => ({
@@ -84,10 +84,10 @@ function mediaFiles(page: Page) {
 
 // --- Flow helpers -------------------------------------------------------------------
 
-/** SkypeLens opened by the user, with an export loaded. Report links can't reach it. */
+/** ChatLens opened by the user, with an export loaded. Report links can't reach it. */
 async function openUserTab(context: BrowserContext, load: (page: Page) => Promise<void>) {
   const userTab = await context.newPage();
-  await userTab.goto(SKYPELENS_E2E_BASE_URL);
+  await userTab.goto(CHATLENS_E2E_BASE_URL);
   await load(userTab);
   await expect(userTab.locator(`[data-conversation-id="${CONVERSATION_ID}"]`)).toBeVisible();
   return userTab;
@@ -95,10 +95,10 @@ async function openUserTab(context: BrowserContext, load: (page: Page) => Promis
 
 async function openReport(context: BrowserContext, testInfo: TestInfo, links: Parameters<typeof reportHtml>[1]) {
   const reportPath = testInfo.outputPath("report.html");
-  await writeFile(reportPath, reportHtml(SKYPELENS_E2E_BASE_URL, links));
+  await writeFile(reportPath, reportHtml(CHATLENS_E2E_BASE_URL, links));
   const report = await context.newPage();
   await report.goto(pathToFileURL(reportPath).href);
-  return report.locator("a.skypelens-link");
+  return report.locator("a.chatlens-link");
 }
 
 /** Waits until both tabs show the same code, then answers in the user's tab. */
@@ -110,7 +110,7 @@ async function answerCopyRequest(reportTab: Page, userTab: Page, allow: boolean)
   await expect(userTab.locator("[data-export-approval-code]")).toHaveCount(0);
 }
 
-test("the report's tab copies the export from a SkypeLens tab the user opened, once allowed", async ({
+test("the report's tab copies the export from a ChatLens tab the user opened, once allowed", async ({
   context,
 }, testInfo) => {
   const exportPath = testInfo.outputPath("messages.json");
@@ -152,9 +152,31 @@ test("the report's tab copies the export from a SkypeLens tab the user opened, o
     context.waitForEvent("page"),
     links.nth(FINDINGS.length).click(),
   ]);
-  await expect(blankTab.getByText("Opened in your other SkypeLens tab")).toBeVisible();
+  await expect(blankTab.getByText("Opened in your other ChatLens tab")).toBeVisible();
   await expect(uploadInput(blankTab)).toHaveCount(1);
   await expect(userTab.locator("[data-export-approval-code]")).toHaveCount(0);
+});
+
+test("a report made before the rename (tab named skypelens) still copies the export", async ({
+  context,
+}, testInfo) => {
+  const exportPath = testInfo.outputPath("messages.json");
+  await writeFile(exportPath, JSON.stringify(createSyntheticExport(300).exportData));
+  const userTab = await openUserTab(context, (page) => uploadInput(page).setInputFiles(exportPath));
+  const links = await openReport(
+    context,
+    testInfo,
+    FINDINGS.slice(0, 2).map((target) => ({ target: { ...target, messageId: messageIdFor(100) }, tab: "skypelens" })),
+  );
+
+  const [reportTab] = await Promise.all([context.waitForEvent("page"), links.nth(0).click()]);
+  await answerCopyRequest(reportTab, userTab, true);
+  await expect(linkedMessage(reportTab, messageIdFor(100))).toBeVisible();
+  await expect(uploadInput(reportTab)).toHaveCount(0);
+
+  // The next click goes to that same tab
+  await links.nth(1).click();
+  expect(context.pages()).toHaveLength(3);
 });
 
 test("media files survive the copy and open in the report's tab", async ({ context }, testInfo) => {
@@ -222,7 +244,7 @@ test("a newer link held by another tab replaces a copy waiting for approval", as
   await writeFile(secondPath, JSON.stringify(second));
   const firstTab = await openUserTab(context, (page) => uploadInput(page).setInputFiles(firstPath));
   const secondTab = await context.newPage();
-  await secondTab.goto(SKYPELENS_E2E_BASE_URL);
+  await secondTab.goto(CHATLENS_E2E_BASE_URL);
   await uploadInput(secondTab).setInputFiles(secondPath);
   await expect(secondTab.locator(`[data-conversation-id="${SECOND_CONVERSATION}"]`)).toBeVisible();
 
@@ -258,7 +280,7 @@ test("a link that no tab has drops a copy still waiting for approval", async ({
 
   // No tab claims the newer link, so the question for the older one is withdrawn
   await expect(userTab.locator("[data-export-approval-code]")).toHaveCount(0, { timeout: 20_000 });
-  await expect(reportTab.getByText(/None of your other SkypeLens tabs has the export/)).toBeVisible();
+  await expect(reportTab.getByText(/None of your other ChatLens tabs has the export/)).toBeVisible();
   await expect(uploadInput(reportTab)).toHaveCount(1);
   // The report's tab keeps the newest link, and has no export
   const hash = new URLSearchParams(new URL(reportTab.url()).hash.slice(1));
@@ -266,7 +288,7 @@ test("a link that no tab has drops a copy still waiting for approval", async ({
   expect(hash.get("messageId")).toBe(notLoaded.messageId);
   expect(await reportTab.evaluate(() => {
     type Store = { getState: () => { exportData: unknown } };
-    return (window as unknown as { __SKYPELENS_STORE__: Store }).__SKYPELENS_STORE__.getState().exportData;
+    return (window as unknown as { __CHATLENS_STORE__: Store }).__CHATLENS_STORE__.getState().exportData;
   })).toBeNull();
 });
 
@@ -281,11 +303,11 @@ test("nothing is copied when the user doesn't allow it", async ({ context }, tes
   const [reportTab] = await Promise.all([context.waitForEvent("page"), links.nth(0).click()]);
   await answerCopyRequest(reportTab, userTab, false);
 
-  await expect(reportTab.getByText("The copy was declined in your other SkypeLens tab.")).toBeVisible();
+  await expect(reportTab.getByText("The copy was declined in your other ChatLens tab.")).toBeVisible();
   await expect(uploadInput(reportTab)).toHaveCount(1);
   expect(await reportTab.evaluate(() => {
     type Store = { getState: () => { exportData: unknown } };
-    return (window as unknown as { __SKYPELENS_STORE__: Store }).__SKYPELENS_STORE__.getState().exportData;
+    return (window as unknown as { __CHATLENS_STORE__: Store }).__CHATLENS_STORE__.getState().exportData;
   })).toBeNull();
 });
 
@@ -298,7 +320,7 @@ test("a copy that fails is reported instead of staying in progress", async ({ co
     type Store = {
       setState: (update: (state: { exportData: object }) => { exportData: object }) => void;
     };
-    const store = (window as unknown as { __SKYPELENS_STORE__: Store }).__SKYPELENS_STORE__;
+    const store = (window as unknown as { __CHATLENS_STORE__: Store }).__CHATLENS_STORE__;
     store.setState((state) => ({ exportData: { ...state.exportData, cannotClone: () => 0 } }));
   });
   const links = await openReport(context, testInfo, [
@@ -309,6 +331,6 @@ test("a copy that fails is reported instead of staying in progress", async ({ co
   await answerCopyRequest(reportTab, userTab, true);
 
   await expect(reportTab.getByText(/could not copy its export/)).toBeVisible();
-  await expect(reportTab.getByText("Copying your export from your other SkypeLens tab…")).toHaveCount(0);
+  await expect(reportTab.getByText("Copying your export from your other ChatLens tab…")).toHaveCount(0);
   await expect(uploadInput(reportTab)).toHaveCount(1);
 });
