@@ -16,11 +16,14 @@ import {
 } from "../../constants/media";
 
 interface MediaMessageProps {
+  /** The file in the export folder (what the source's media resolver opens). */
   mediaId: string;
+  /** The message it is in: what tells two messages with the same file apart in the gallery. */
+  messageId: string;
   isOwner: boolean;
 }
 
-export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
+export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps) {
   const { exportData } = useMessageStore();
   const { media } = useSource();
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
@@ -30,40 +33,40 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewerOpened, setViewerOpened] = useState(false);
-  const [currentViewMediaId, setCurrentViewMediaId] = useState(mediaId);
+  const [currentViewId, setCurrentViewId] = useState(messageId);
   const imageLoadedRef = useRef(false);
   const thumbLoadedRef = useRef(false);
   const urlRef = useRef<string | null>(null);
   const thumbUrlRef = useRef<string | null>(null);
 
-  const navigation = useMediaNavigation(currentViewMediaId, viewerOpened);
+  const navigation = useMediaNavigation(currentViewId, viewerOpened);
   const hasNavigation = !navigation.isLoading && navigation.totalMedia > 1;
 
   const handleOpenViewer = useCallback(() => {
-    setCurrentViewMediaId(mediaId);
+    setCurrentViewId(messageId);
     setViewerOpened(true);
-  }, [mediaId]);
+  }, [messageId]);
 
   const handleClose = useCallback(() => {
     setViewerOpened(false);
   }, []);
 
   const handlePrevious = useCallback(() => {
-    if (navigation.previousMediaId) {
-      setCurrentViewMediaId(navigation.previousMediaId);
+    if (navigation.previousItem) {
+      setCurrentViewId(navigation.previousItem.id);
     }
-  }, [navigation.previousMediaId]);
+  }, [navigation.previousItem]);
 
   const handleNext = useCallback(() => {
-    if (navigation.nextMediaId) {
-      setCurrentViewMediaId(navigation.nextMediaId);
+    if (navigation.nextItem) {
+      setCurrentViewId(navigation.nextItem.id);
     }
-  }, [navigation.nextMediaId]);
+  }, [navigation.nextItem]);
 
   const handleNavigateToIndex = useCallback(
     (index: number) => {
       if (navigation.mediaItems[index]) {
-        setCurrentViewMediaId(navigation.mediaItems[index].mediaId);
+        setCurrentViewId(navigation.mediaItems[index].id);
       }
     },
     [navigation.mediaItems],
@@ -197,9 +200,10 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
     <MediaViewer
       opened={viewerOpened}
       onClose={handleClose}
-      mediaId={currentViewMediaId}
-      initialMediaUrl={currentViewMediaId === mediaId ? mediaUrl : undefined}
-      initialMetadata={currentViewMediaId === mediaId ? metadata : undefined}
+      // The file of the item being viewed; this message's own until the gallery has loaded
+      mediaId={navigation.currentItem?.mediaId ?? mediaId}
+      initialMediaUrl={currentViewId === messageId ? mediaUrl : undefined}
+      initialMetadata={currentViewId === messageId ? metadata : undefined}
       onPrevious={hasNavigation ? handlePrevious : undefined}
       onNext={hasNavigation ? handleNext : undefined}
       onNavigateToIndex={hasNavigation ? handleNavigateToIndex : undefined}

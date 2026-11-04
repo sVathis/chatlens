@@ -77,7 +77,11 @@ function MessageBubbleComponent({
           )}
           {message.forwarded && <ForwardedNote />}
           <Box pos="relative" maw="100%">
-            <MediaMessage mediaId={message.mediaUrl} isOwner={message.isOwner} />
+            <MediaMessage
+              mediaId={message.mediaUrl}
+              messageId={message.id}
+              isOwner={message.isOwner}
+            />
             {copyLink(sidePlacement)}
           </Box>
           {message.caption && (
