@@ -137,6 +137,32 @@ describe("opening a conversation scrolls it to the newest message and keeps it t
     expect(layout.top).toBe(100);
   });
 
+  it("stops following when something else moves the view, such as a script or a scrollbar drag", async () => {
+    const layout = new FakeLayout();
+    const { element } = mount(layout);
+    await waitFor(() => layout.top === 400, "the first scroll");
+
+    layout.top = 0; // no wheel, touch or key: the browser just reports a scroll to the top
+    element().dispatchEvent(new Event("scroll"));
+    layout.height = 1800;
+    await sleep(250);
+    expect(layout.top).toBe(0);
+  });
+
+  it("keeps following when a scroll event only reports the hook's own scroll", async () => {
+    const layout = new FakeLayout();
+    const { element } = mount(layout);
+    await waitFor(() => layout.top === 400, "the first scroll");
+
+    element().dispatchEvent(new Event("scroll")); // what the browser fires after our scrollTop
+    layout.height = 1800;
+    await waitFor(() => layout.top === layout.bottom, "following the growth");
+    element().dispatchEvent(new Event("scroll"));
+    layout.height = 2600;
+    await waitFor(() => layout.top === layout.bottom, "following the growth again");
+    expect(layout.top).toBe(2000);
+  });
+
   it.each(["touchstart", "pointerdown", "keydown"])("stops following on %s too", async (type) => {
     const layout = new FakeLayout();
     const { element } = mount(layout);

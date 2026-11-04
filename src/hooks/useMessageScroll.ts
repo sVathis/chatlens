@@ -63,7 +63,8 @@ export function useMessageScroll({
    * after the list first looks settled (on a busy machine, well after), which grows the
    * list below the view; a single scroll, or one more after a fixed delay, then leaves the
    * conversation open above its newest message. The pinning stops at once if the user
-   * scrolls, a deep link takes over, or another conversation is opened.
+   * scrolls (or anything else moves the view), a deep link takes over, or another
+   * conversation is opened.
    */
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -88,6 +89,14 @@ export function useMessageScroll({
     };
     for (const type of USER_INPUT) scrollContainer.addEventListener(type, stop, { passive: true });
 
+    // So is any scroll to somewhere this hook did not put the view (a scrollbar drag, a
+    // script), which a growing list alone never causes: growth leaves scrollTop as it was
+    let ownTop: number | null = null;
+    const onScroll = () => {
+      if (ownTop !== null && Math.abs(scrollContainer.scrollTop - ownTop) > 1) cancelled = true;
+    };
+    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+
     const scrollToBottom = () => {
       const container = scrollContainerRef.current;
       if (cancelled || !container || navigationTookOver()) {
@@ -110,7 +119,11 @@ export function useMessageScroll({
       const settled = stableFrames >= REQUIRED_STABLE_FRAMES || frameCount >= MAX_SCROLL_FRAMES;
       if (settled) {
         const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
-        if (!atBottom) container.scrollTop = container.scrollHeight;
+        if (!atBottom) {
+          container.scrollTop = container.scrollHeight;
+          // Where the browser actually put it (clamped), which the scroll event will report
+          ownTop = container.scrollTop;
+        }
         if (stableFrames >= PIN_STABLE_FRAMES || frameCount >= MAX_PIN_FRAMES) return;
       }
       requestAnimationFrame(scrollToBottom);
@@ -121,6 +134,7 @@ export function useMessageScroll({
     return () => {
       cancelled = true;
       for (const type of USER_INPUT) scrollContainer.removeEventListener(type, stop);
+      scrollContainer.removeEventListener("scroll", onScroll);
     };
   }, [conversation, swapped, scrollContainerRef, navigationLockRef]);
 
