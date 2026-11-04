@@ -13,6 +13,8 @@ import { skypeSource } from "../sources/skype";
 import { isSkypeJson, normalizeSkypeExport, toChatExport } from "../sources/skype/load";
 import type { Message } from "../sources/skype/types";
 import { PURIFY_CONFIG } from "../sources/skype/constants";
+import { skypeConversationKind, skypeMemberCount } from "../sources/skype/kind";
+import { conversationLabel } from "../utils/conversationLabel";
 import { processMessages } from "../sources/skype/messageProcessor";
 import { useMessageStore } from "../store/messageStore";
 import { MESSAGE_HTML_CONFIG, sanitizeMessageHtml, sanitizeProcessedMessage } from "../utils/sanitizeHtml";
@@ -386,5 +388,74 @@ describe("choosing the source for an upload", () => {
     expect(pickFolderSource([skypeSource, other], folder("other.json"))?.id).toBe("other");
     expect(pickFolderSource([skypeSource, other], folder("messages.json"))?.id).toBe("skype");
     expect(pickFolderSource([skypeSource, other], folder("notes.txt"))).toBeUndefined();
+  });
+});
+
+describe("what a Skype conversation is", () => {
+  it("is told by the prefix of its ID", () => {
+    expect(skypeConversationKind("19:abc@thread.skype")).toBe("group");
+    expect(skypeConversationKind("19:abc@thread.v2")).toBe("group");
+    expect(skypeConversationKind("8:live:.cid.abc")).toBe("direct");
+    expect(skypeConversationKind("8:someone")).toBe("direct");
+    expect(skypeConversationKind("4:+306900000000")).toBe("direct");
+    expect(skypeConversationKind("28:concierge")).toBe("service");
+    expect(skypeConversationKind("48:notifications")).toBe("service");
+    // Not guessed
+    expect(skypeConversationKind("c")).toBeUndefined();
+    expect(skypeConversationKind("")).toBeUndefined();
+  });
+
+  it("has a member count however Skype wrote it", () => {
+    expect(skypeMemberCount({ membercount: 3 })).toBe(3);
+    expect(skypeMemberCount({ membercount: "3" as unknown as number })).toBe(3);
+    // Only the members are listed
+    expect(skypeMemberCount({ members: '["8:a","8:b","8:c","8:d"]' })).toBe(4);
+    // The count wins over the list
+    expect(skypeMemberCount({ membercount: 2, members: '["8:a","8:b","8:c"]' })).toBe(2);
+    for (const properties of [
+      null,
+      undefined,
+      {},
+      { membercount: 0 },
+      { membercount: -2 },
+      { membercount: "many" as unknown as number },
+      { membercount: 2.5 },
+      { members: "not json" },
+      { members: "[]" },
+      { members: '{"a": 1}' },
+    ]) {
+      expect(skypeMemberCount(properties), JSON.stringify(properties)).toBeUndefined();
+    }
+  });
+
+  it("is carried into the shared model, with a member count for groups only", () => {
+    const chat = skypeSource.fromJson({
+      userId: OWNER_ID,
+      exportDate: "",
+      conversations: [
+        { ...conversation("19:g@thread.skype", []), threadProperties: { membercount: "3" } },
+        { ...conversation("8:live:.cid.p", []), threadProperties: { membercount: "2" } },
+        { ...conversation("28:bot", []), threadProperties: null },
+        conversation("custom-id", []),
+      ],
+    });
+    const [group, person, bot, custom] = chat.conversations;
+
+    expect(group).toMatchObject({ kind: "group", memberCount: 3 });
+    expect(person.kind).toBe("direct");
+    expect(person.memberCount).toBeUndefined();
+    expect(bot.kind).toBe("service");
+    expect(custom.kind).toBeUndefined();
+    expect(structuredClone(chat)).toEqual(chat);
+  });
+
+  it("is worded for the conversation list", () => {
+    const base = { id: "x", title: "t", lastActivity: "", messages: [] };
+    expect(conversationLabel({ ...base, kind: "group", memberCount: 3 })).toBe("Group · 3 people");
+    expect(conversationLabel({ ...base, kind: "group", memberCount: 1 })).toBe("Group · 1 person");
+    expect(conversationLabel({ ...base, kind: "group" })).toBe("Group");
+    expect(conversationLabel({ ...base, kind: "service" })).toBe("Service");
+    expect(conversationLabel({ ...base, kind: "direct" })).toBeNull();
+    expect(conversationLabel(base)).toBeNull();
   });
 });

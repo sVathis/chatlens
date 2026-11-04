@@ -17,10 +17,20 @@ export interface SourceMessage {
   id: string;
 }
 
+/**
+ * What a conversation is, where the source says so: a chat with one other person, a chat
+ * with several people, or an account that is not a person (a bot or a system feed).
+ */
+export type ConversationKind = "direct" | "group" | "service";
+
 export interface ChatConversation {
   /** The source's own conversation ID; what deep links point at. */
   id: string;
   title: string;
+  /** Omitted when the source doesn't say. */
+  kind?: ConversationKind;
+  /** How many people are in a group, when the export says so. */
+  memberCount?: number;
   /** ISO time of the newest message, or "" when there are no messages. */
   lastActivity: string;
   /**
