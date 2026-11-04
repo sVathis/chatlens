@@ -94,6 +94,7 @@ export function useMessageProcessing({
           mediaFiles: exportData.mediaFiles,
           limit: messagesToLoad,
         },
+        conversation.reactions,
       );
       cacheProcessedMessages(conversation.id, processed, swapped);
       startTransition(() =>
@@ -105,6 +106,7 @@ export function useMessageProcessing({
   }, [
     conversation?.id,
     conversation?.messages,
+    conversation?.reactions,
     exportData?.ownerId,
     exportData?.source,
     exportData?.mediaFiles,

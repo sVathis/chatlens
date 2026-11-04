@@ -1,10 +1,11 @@
-import type { ChatExport } from "../../model/chat";
+import type { ChatConversation, ChatExport } from "../../model/chat";
 import { debugLog } from "../../utils/debug";
 import { readJsonFile } from "../../utils/fileParser";
 import { MEDIA_PATH_PREFIX } from "../../constants/fileUpload";
 import { skypeConversationKind, skypeMemberCount } from "./kind";
+import { attachCallReactions, isEmojiOnlyThread } from "./reactions";
 import { newestFirst } from "./order";
-import type { Conversation, SkypeExport } from "./types";
+import type { Conversation, Message, SkypeExport } from "./types";
 
 /**
  * Picks the export owner for JSON without a `userId`: the most frequent sender that
@@ -106,23 +107,28 @@ export function normalizeSkypeExport(parsed: unknown): SkypeExport {
  * (as Skype writes it) is used as it is, not copied.
  */
 export function toChatExport(data: SkypeExport): ChatExport {
+  const conversations: ChatConversation[] = data.conversations.map((conversation) => {
+    const messages = newestFirst(conversation.MessageList ?? []);
+    const kind = skypeConversationKind(conversation.id);
+    return {
+      id: conversation.id,
+      // Some conversations have no name in the export (null), though the type says text
+      title: conversation.displayName ?? "",
+      kind,
+      memberCount: kind === "group" ? skypeMemberCount(conversation.threadProperties) : undefined,
+      // Skype records the emoji sent during a call as threads of their own
+      emojiOnly: kind === "group" && isEmojiOnlyThread(messages as Message[]) ? true : undefined,
+      lastActivity: messages[0]?.originalarrivaltime ?? "",
+      messages,
+    };
+  });
+  attachCallReactions(conversations, data.userId);
+
   return {
     source: "skype",
     ownerId: data.userId,
     exportedAt: data.exportDate,
-    conversations: data.conversations.map((conversation) => {
-      const messages = newestFirst(conversation.MessageList ?? []);
-      const kind = skypeConversationKind(conversation.id);
-      return {
-        id: conversation.id,
-        // Some conversations have no name in the export (null), though the type says text
-        title: conversation.displayName ?? "",
-        kind,
-        memberCount: kind === "group" ? skypeMemberCount(conversation.threadProperties) : undefined,
-        lastActivity: messages[0]?.originalarrivaltime ?? "",
-        messages,
-      };
-    }),
+    conversations,
     mediaFiles: data.mediaFiles,
   };
 }

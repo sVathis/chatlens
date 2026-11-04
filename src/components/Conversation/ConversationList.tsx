@@ -1,5 +1,6 @@
 import { Stack, UnstyledButton, Text, Group, Badge } from "@mantine/core";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
+import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import {
   useConversations,
   useSelectedConversationId,
@@ -106,12 +107,55 @@ const ConversationItem = memo(function ConversationItem({
 	);
 });
 
+/**
+ * One row that stands for the conversations that hold nothing but emoji (such as the
+ * threads Skype keeps for reactions sent during a call), so there is not one entry for
+ * each of them. It opens to list them.
+ */
+function EmojiOnlyRow({
+	count,
+	shownOnCalls,
+	isOpen,
+	onToggle,
+}: {
+	count: number;
+	shownOnCalls: number;
+	isOpen: boolean;
+	onToggle: () => void;
+}) {
+	return (
+		<UnstyledButton
+			onClick={onToggle}
+			aria-expanded={isOpen}
+			data-emoji-only-row
+			px="md"
+			py="sm"
+			style={{ borderRadius: "var(--mantine-radius-md)" }}
+		>
+			<Group gap="xs" wrap="nowrap" align="flex-start">
+				{isOpen ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
+				<Stack gap={2}>
+					<Text size="sm" fw={500} c="dimmed">
+						Emoji-only threads · {count}
+					</Text>
+					{shownOnCalls > 0 && (
+						<Text size="xs" c="dimmed">
+							{shownOnCalls} of them shown as reactions on calls
+						</Text>
+					)}
+				</Stack>
+			</Group>
+		</UnstyledButton>
+	);
+}
+
 export function ConversationList({ searchQuery }: ConversationListProps) {
 	const conversations = useConversations();
 	const openConversation = useOpenConversation();
 	const selectedConversationId = useSelectedConversationId();
 	const exportData = useExportData();
 	const source = useSource();
+	const [emojiOnlyOpen, setEmojiOnlyOpen] = useState(false);
 
 	const filteredConversations = useMemo(() => {
 		if (!searchQuery.trim()) return conversations;
@@ -123,6 +167,14 @@ export function ConversationList({ searchQuery }: ConversationListProps) {
 		});
 	}, [conversations, searchQuery]);
 
+	const { regular, emojiOnly } = useMemo(
+		() => ({
+			regular: filteredConversations.filter((c) => !c.emojiOnly),
+			emojiOnly: filteredConversations.filter((c) => c.emojiOnly),
+		}),
+		[filteredConversations],
+	);
+
 	if (filteredConversations.length === 0) {
 		return (
 			<Text c="dimmed" ta="center" mt="xl">
@@ -131,18 +183,38 @@ export function ConversationList({ searchQuery }: ConversationListProps) {
 		);
 	}
 
+	// Nothing stays out of reach: a search, or a selected conversation in the group (say,
+	// from a link), opens it
+	const isOpen =
+		emojiOnlyOpen ||
+		searchQuery.trim() !== "" ||
+		emojiOnly.some((c) => c.id === selectedConversationId);
+
+	const entry = (conversation: ChatConversation) => (
+		<ConversationItem
+			key={conversation.id}
+			conversation={conversation}
+			isSelected={conversation.id === selectedConversationId}
+			ownerId={exportData?.ownerId || ""}
+			source={source}
+			onSelect={openConversation}
+		/>
+	);
+
 	return (
 		<Stack gap="xs">
-			{filteredConversations.map((conversation) => (
-				<ConversationItem
-					key={conversation.id}
-					conversation={conversation}
-					isSelected={conversation.id === selectedConversationId}
-					ownerId={exportData?.ownerId || ""}
-					source={source}
-					onSelect={openConversation}
-				/>
-			))}
+			{regular.map(entry)}
+			{emojiOnly.length > 0 && (
+				<>
+					<EmojiOnlyRow
+						count={emojiOnly.length}
+						shownOnCalls={emojiOnly.filter((c) => c.shownOn).length}
+						isOpen={isOpen}
+						onToggle={() => setEmojiOnlyOpen((open) => !open)}
+					/>
+					{isOpen && emojiOnly.map(entry)}
+				</>
+			)}
 		</Stack>
 	);
 }

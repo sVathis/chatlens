@@ -5,6 +5,11 @@ import type { ChatConversation } from "../model/chat";
  * with one person (the common case, which needs no note) and when the source doesn't say.
  */
 export function conversationLabel(conversation: ChatConversation): string | null {
+  if (conversation.emojiOnly) {
+    const { shownOn } = conversation;
+    if (!shownOn) return "Emoji only";
+    return shownOn.messageIds.length > 1 ? "Emoji only · shown on calls" : "Emoji only · shown on a call";
+  }
   switch (conversation.kind) {
     case "group": {
       const members = conversation.memberCount;

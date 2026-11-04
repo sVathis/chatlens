@@ -1,3 +1,5 @@
+import type { Reaction } from "../model/chat";
+
 /** What the viewer renders. Every source's adapter produces these (see src/sources/). */
 export interface ProcessedMessage {
   id: string;
@@ -12,6 +14,8 @@ export interface ProcessedMessage {
   mediaUrl?: string;
   /** Original message IDs folded into this displayed message (e.g. translation pairs). */
   mergedIds?: string[];
+  /** Emoji sent in reaction to this message (see ChatConversation.reactions). */
+  reactions?: Reaction[];
 }
 
 export interface MediaMetadata {

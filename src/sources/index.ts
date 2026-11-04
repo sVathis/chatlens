@@ -1,6 +1,7 @@
-import type { ChatExport, SourceId, SourceMessage } from "../model/chat";
+import type { ChatExport, Reaction, SourceId, SourceMessage } from "../model/chat";
 import type { ProcessedMessage } from "../types/messages";
 import { readJsonFile } from "../utils/fileParser";
+import { withReactions } from "../utils/reactions";
 import { sanitizeProcessedMessage } from "../utils/sanitizeHtml";
 import { skypeSource } from "./skype";
 import type { ProcessOptions, SourceAdapter } from "./types";
@@ -49,11 +50,14 @@ export async function loadExportJson(
  * Shows a conversation's messages: the one place they leave an adapter on their way to
  * the screen. Whatever HTML an adapter returns is sanitized here, so no renderer has to
  * trust it, and a new adapter can't forget to (see sanitizeHtml.ts for what is kept).
+ * The conversation's reactions, if it has any, are attached here too.
  */
 export function processForDisplay(
   source: SourceAdapter,
   messages: SourceMessage[],
   options: ProcessOptions,
+  reactions?: Record<string, Reaction[]>,
 ): ProcessedMessage[] {
-  return source.process(messages, options).map(sanitizeProcessedMessage);
+  const shown = source.process(messages, options).map(sanitizeProcessedMessage);
+  return reactions ? withReactions(shown, reactions) : shown;
 }
