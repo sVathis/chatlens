@@ -52,12 +52,13 @@ export function thread(
   start: string,
   emoji: [string, string, string][],
   added = [OWNER, CONTACT],
+  initiator?: string,
 ) {
   const events = [
     message(
       "ThreadActivity/AddMember",
       start,
-      `<addmember>${added.map((target) => `<target>${target}</target>`).join("")}</addmember>`,
+      `<addmember>${initiator ? `<initiator>${initiator}</initiator>` : ""}${added.map((target) => `<target>${target}</target>`).join("")}</addmember>`,
       id,
     ),
     message("ThreadActivity/HistoryDisclosedUpdate", start, "<value>true</value>", id),

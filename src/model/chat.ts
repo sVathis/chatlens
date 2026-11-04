@@ -44,11 +44,11 @@ export interface ChatConversation {
    */
   emojiOnly?: boolean;
   /**
-   * Where the emoji of an emoji-only conversation are shown instead, as reactions on a
-   * message of another conversation, when the adapter could tell which message they
-   * belong to.
+   * Where the emoji of an emoji-only conversation are shown instead, as reactions on
+   * messages of another conversation. Set only when every one of its emoji was placed; a
+   * conversation whose emoji were placed in part, or not at all, leaves this out.
    */
-  shownOn?: { conversationId: string; messageId: string };
+  shownOn?: { conversationId: string; messageIds: string[] };
   /** Reactions to this conversation's messages, by message ID. */
   reactions?: Record<string, Reaction[]>;
   /** ISO time of the newest message, or "" when there are no messages. */

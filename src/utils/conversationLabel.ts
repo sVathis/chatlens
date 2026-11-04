@@ -6,7 +6,9 @@ import type { ChatConversation } from "../model/chat";
  */
 export function conversationLabel(conversation: ChatConversation): string | null {
   if (conversation.emojiOnly) {
-    return conversation.shownOn ? "Emoji only · shown on a call" : "Emoji only";
+    const { shownOn } = conversation;
+    if (!shownOn) return "Emoji only";
+    return shownOn.messageIds.length > 1 ? "Emoji only · shown on calls" : "Emoji only · shown on a call";
   }
   switch (conversation.kind) {
     case "group": {
