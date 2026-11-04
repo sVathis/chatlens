@@ -23,6 +23,12 @@ export interface SourceMessage {
  */
 export type ConversationKind = "direct" | "group" | "service";
 
+/** Emoji sent in reaction to a message, counted by emoji. */
+export interface Reaction {
+  emoji: string;
+  count: number;
+}
+
 export interface ChatConversation {
   /** The source's own conversation ID; what deep links point at. */
   id: string;
@@ -31,6 +37,20 @@ export interface ChatConversation {
   kind?: ConversationKind;
   /** How many people are in a group, when the export says so. */
   memberCount?: number;
+  /**
+   * True for a conversation that holds nothing but emoji (and system events), such as the
+   * little threads Skype records for reactions sent during a call. The conversation list
+   * keeps these together, out of the way.
+   */
+  emojiOnly?: boolean;
+  /**
+   * Where the emoji of an emoji-only conversation are shown instead, as reactions on a
+   * message of another conversation, when the adapter could tell which message they
+   * belong to.
+   */
+  shownOn?: { conversationId: string; messageId: string };
+  /** Reactions to this conversation's messages, by message ID. */
+  reactions?: Record<string, Reaction[]>;
   /** ISO time of the newest message, or "" when there are no messages. */
   lastActivity: string;
   /**

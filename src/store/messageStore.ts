@@ -177,7 +177,10 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
       (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime(),
     );
 
-    const selectedId = filteredConversations[0]?.id || null;
+    // Open the most recently active conversation, but not an emoji-only thread, which the
+    // list keeps out of the way
+    const selectedId =
+      (filteredConversations.find((c) => !c.emojiOnly) ?? filteredConversations[0])?.id || null;
     const { requestedDeepLink, navigationRequestCount, navigationError } = get();
 
     // Complete the link in the URL: opened before any export was loaded, or not

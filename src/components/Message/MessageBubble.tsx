@@ -10,6 +10,7 @@ import {
 } from "../../constants/messageBubble";
 import { highlightSearchMatch } from "../../utils/messageSearch";
 import { CopyMessageLinkButton } from "./CopyMessageLinkButton";
+import { ReactionChips } from "./ReactionChips";
 
 interface MessageBubbleProps {
   message: ProcessedMessage;
@@ -131,6 +132,7 @@ function MessageBubbleComponent({
           />
           {copyLink("end")}
         </Paper>
+        {message.reactions && <ReactionChips reactions={message.reactions} />}
         {showTimestamp && (
           <Text
             size="xs"
