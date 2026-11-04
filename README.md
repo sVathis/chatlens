@@ -234,7 +234,12 @@ bun run lint
 # Browser tests (Chromium and Firefox; downloads the browsers once)
 bunx playwright install chromium firefox
 bun run test:e2e
+
+# Python tests for the report-link helper in tools/
+python -m unittest discover tools -v
 ```
+
+GitHub Actions runs all of these (lint, `bun run test`, build, the Python tests and the browser tests) on every pull request and on pushes to `main`; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). It does not gate the GitHub Pages deploy. If the browser tests fail there, the run uploads the Playwright report and traces as an artifact.
 
 ### Accessing the App
 
