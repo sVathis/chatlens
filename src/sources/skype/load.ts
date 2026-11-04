@@ -2,6 +2,7 @@ import type { ChatExport } from "../../model/chat";
 import { debugLog } from "../../utils/debug";
 import { readJsonFile } from "../../utils/fileParser";
 import { MEDIA_PATH_PREFIX } from "../../constants/fileUpload";
+import { skypeConversationKind, skypeMemberCount } from "./kind";
 import { newestFirst } from "./order";
 import type { Conversation, SkypeExport } from "./types";
 
@@ -111,9 +112,13 @@ export function toChatExport(data: SkypeExport): ChatExport {
     exportedAt: data.exportDate,
     conversations: data.conversations.map((conversation) => {
       const messages = newestFirst(conversation.MessageList ?? []);
+      const kind = skypeConversationKind(conversation.id);
       return {
         id: conversation.id,
-        title: conversation.displayName,
+        // Some conversations have no name in the export (null), though the type says text
+        title: conversation.displayName ?? "",
+        kind,
+        memberCount: kind === "group" ? skypeMemberCount(conversation.threadProperties) : undefined,
         lastActivity: messages[0]?.originalarrivaltime ?? "",
         messages,
       };

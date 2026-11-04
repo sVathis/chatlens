@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MantineProvider } from "@mantine/core";
 import { MainContent } from "../../components/Layout/MainContent";
@@ -9,15 +10,16 @@ import { MainContent } from "../../components/Layout/MainContent";
 let root: Root | null = null;
 let host: HTMLElement | null = null;
 
-export function renderApp() {
+/** Renders any part of the viewer inside the theme provider. */
+export function renderInApp(element: ReactNode) {
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
-  root.render(
-    <MantineProvider>
-      <MainContent />
-    </MantineProvider>,
-  );
+  root.render(<MantineProvider>{element}</MantineProvider>);
+}
+
+export function renderApp() {
+  renderInApp(<MainContent />);
 }
 
 export function unmountApp() {

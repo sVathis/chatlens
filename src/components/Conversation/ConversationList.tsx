@@ -7,6 +7,7 @@ import {
 } from "../../store/messageStore";
 import { useOpenConversation } from "../../hooks/useDeepLinkNavigation";
 import { useSource } from "../../hooks/useSource";
+import { conversationLabel } from "../../utils/conversationLabel";
 import { formatRelativeTime } from "../../utils/dateFormat";
 import type { ChatConversation } from "../../model/chat";
 import type { SourceAdapter } from "../../sources/types";
@@ -30,6 +31,7 @@ const ConversationItem = memo(function ConversationItem({
 }) {
 	const messageCount = conversation.messages.length;
 	const preview = source.preview(conversation.messages, ownerId);
+	const label = conversationLabel(conversation);
 	const handleClick = () => onSelect(conversation.id);
 
 	const displayName = source.displayName(conversation.title) || source.displayName(conversation.id) || conversation.id;
@@ -61,9 +63,11 @@ const ConversationItem = memo(function ConversationItem({
 					<Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
 						<Text 
 							c={isSelected ? "light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-0))" : "light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-3))"} 
-							fw={isSelected ? 600 : 500} 
+							fw={isSelected ? 600 : 500}
 							lineClamp={1}
 							size="sm"
+							// The name is cut to one line, so the full text is on hover
+							title={displayName}
 						>
 							{displayName}
 						</Text>
@@ -87,6 +91,11 @@ const ConversationItem = memo(function ConversationItem({
 						/>
 					)}
 				</Group>
+				{label && (
+					<Text size="xs" c="dimmed" fw={500} data-conversation-label>
+						{label}
+					</Text>
+				)}
 				{preview && (
 					<Text size="xs" c="dimmed" lineClamp={2}>
 						{preview}
