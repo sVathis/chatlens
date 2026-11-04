@@ -312,9 +312,20 @@ describe("showing Viber messages", () => {
     expect(shown(direct, "102")).toMatchObject({ isOwner: true, displayName: null });
   });
 
-  it("keeps leading spaces and drops only trailing blank lines", () => {
+  it("keeps leading spaces and drops only the line breaks at the very end", () => {
     const group = show(chat, GROUP);
     expect(shown(group, "206").content).toBe("  padded text  <br>line two");
+  });
+
+  it("keeps trailing spaces and tabs as exported, which the exporter preserves", () => {
+    expect(textToHtml("end  ")).toBe("end  ");
+    expect(textToHtml("end\t")).toBe("end\t");
+    expect(textToHtml("end \n")).toBe("end ");
+    expect(textToHtml("end  \r\n\r\n")).toBe("end  ");
+    expect(textToHtml("a\n\nb  \n")).toBe("a<br><br>b  ");
+    // A message of nothing but spaces is still that
+    expect(textToHtml("   ")).toBe("   ");
+    expect(textToHtml("\n\n")).toBe("");
   });
 
   it("shows a reply as a quote, pointing at the message when it is in the chat", () => {

@@ -17,11 +17,12 @@ const TRAILING = /[.,;:!?)\]}'"]+$/;
 
 /**
  * Message text as HTML: escaped, with web addresses made into links and line breaks kept.
- * Whitespace is preserved by the message style (pre-wrap); only trailing blank lines are
- * dropped, so a message ending in a newline doesn't get an empty line.
+ * Spaces and tabs are kept exactly as exported (the message style is pre-wrap), including
+ * trailing ones; only the line breaks at the very end are dropped, so a message ending in
+ * a newline doesn't get an empty line under it.
  */
 export function textToHtml(text: string): string {
-  const body = text.replace(/\s+$/, "");
+  const body = text.replace(/(?:\r?\n)+$/, "");
   let html = "";
   let last = 0;
 
