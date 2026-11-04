@@ -148,31 +148,32 @@ export function useMediaGallery(enabled: boolean = false) {
   return { mediaItems, isLoading };
 }
 
+/**
+ * Where an item is in the gallery, and its neighbours. An item is found by the ID of its
+ * message, not by its file: the same file can be in several messages (a sticker sent many
+ * times, in Viber), and a file would always find the first of them.
+ */
 export function useMediaNavigation(
-  currentMediaId: string,
+  currentItemId: string,
   enabled: boolean = false,
 ) {
   const { mediaItems, isLoading } = useMediaGallery(enabled);
 
   const currentIndex = mediaItems.findIndex(
-    (item) => item.mediaId === currentMediaId,
+    (item) => item.id === currentItemId,
   );
 
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < mediaItems.length - 1;
 
-  const previousMediaId = hasPrevious
-    ? mediaItems[currentIndex - 1].mediaId
-    : null;
-  const nextMediaId = hasNext ? mediaItems[currentIndex + 1].mediaId : null;
-
   return {
     currentIndex,
+    currentItem: mediaItems[currentIndex] ?? null,
     totalMedia: mediaItems.length,
     hasPrevious,
     hasNext,
-    previousMediaId,
-    nextMediaId,
+    previousItem: hasPrevious ? mediaItems[currentIndex - 1] : null,
+    nextItem: hasNext ? mediaItems[currentIndex + 1] : null,
     mediaItems,
     isLoading,
   };

@@ -6,7 +6,7 @@
  */
 
 /** The chat apps ChatLens can open exports from. */
-export type SourceId = "skype";
+export type SourceId = "skype" | "viber";
 
 /**
  * A message in the source's own format. The shared code only needs its ID; everything
@@ -19,9 +19,10 @@ export interface SourceMessage {
 
 /**
  * What a conversation is, where the source says so: a chat with one other person, a chat
- * with several people, or an account that is not a person (a bot or a system feed).
+ * with several people, a public community or channel, or an account that is not a person
+ * (a bot or a system feed).
  */
-export type ConversationKind = "direct" | "group" | "service";
+export type ConversationKind = "direct" | "group" | "community" | "service";
 
 /** Emoji sent in reaction to a message, counted by emoji. */
 export interface Reaction {

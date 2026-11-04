@@ -39,6 +39,7 @@ No installation required • Runs in your browser • Privacy-first
 - 🚀 **No File Size Limits** – Handles massive `messages.json` files (500MB+) with streaming parser and virtual scrolling
 - 🖼️ **Full Media Support** – Upload entire Skype export folder to view images, videos, and all media files alongside conversations
 - 🧩 **Teams export support** – Also works with Microsoft Teams exports that share the same (or very similar) `messages.json` structure
+- 🟣 **Viber export support** – Also opens the `viber_export.json` written by the [ViberPC-Export](https://github.com/sVathis/ViberPC-Export) tool, with its photos, videos, voice messages, files, stickers, quotes and reactions (see [Opening a Viber export](#opening-a-viber-export)). It is shown in the same look as Skype for now.
 - 🔍 **Message Search** – Search within conversations with real-time filtering, match highlighting, and result navigation
 - ⚡ **Performance Optimised** – Virtual scrolling, lazy loading, and memory-efficient rendering for smooth browsing
 
@@ -93,6 +94,18 @@ ChatLens intelligently processes Skype's built-in translation feature:
    - **Conversations only** – Drag and drop `messages.json` (or a single extracted conversation JSON with `id` and `MessageList`) or click to select it
    - **Full media support** – Click "Select Export Directory" and choose the entire extracted Skype export folder
 3. Browse your conversations with the familiar Skype interface!
+
+### Opening a Viber export
+
+ChatLens opens the structured export that [ViberPC-Export](https://github.com/sVathis/ViberPC-Export) writes (`python viber.py json`, after `python viber.py media` so the media files have a path). Its format is `viberpc-export`, **version 1**; a newer version is refused with a message instead of being shown wrongly.
+
+- **Everything, with media** – Click "Select Export Directory" and choose the `export/` folder (the folder holding `viber_export.json` and `media/`). A parent of that folder works too: media is found relative to the folder holding the JSON.
+- **Conversations only** – Drop or select `viber_export.json` on its own. Photos, voice messages and files then show "not in this export".
+- **What is shown** – Text with its line breaks and links; photos and videos (a video that was only exported as a thumbnail shows that still), with captions; voice messages with a player; files as downloads; stickers; link previews (title and site, taken from the export, never fetched); a location's address and coordinates as text (there is no map link, so nothing is sent anywhere); contact cards; calls and system messages in the middle of the chat; quotes (the text quoted, as in the export); and "edited" and "forwarded" marks. A chat is labelled as a group (with its size) or a community.
+- **Reactions** – Shown as chips under the message they are for, from both places the export keeps them: counts on messages (groups and communities) and the separate records of one-to-one chats, per person with the latest one counting and a reaction taken back removed. The owner's own reaction is counted with the others'.
+- **Who is who** – You are `viber:self`; everyone else is `viber:<contact id>`. Chats are `viber:<chat id>` and messages are the exporter's event IDs, so [deep links](#-deep-links-and-message-permalinks) work: `#conversationId=viber%3A10&messageId=104`.
+- **Calls** – The export records no direction or length for a call, so a call is shown as "Call with <name>" and nothing more.
+- **Looks** – This first version shows a Viber export in ChatLens' existing look. A look closer to the Viber app is planned.
 
 ## 🔗 Deep Links and Message Permalinks
 
@@ -257,7 +270,9 @@ ChatLens works on a source-neutral model, so more chat apps than Skype can be ad
 - The messages an adapter shows are HTML, and **`processForDisplay`** (in `src/sources/index.ts`) is where they are made safe: it sanitizes them with an allowlist (`src/utils/sanitizeHtml.ts`), so no adapter has to be trusted to do it. An adapter should still escape plain text it puts into the HTML.
 - Everything else (the conversation list, message list, search, deep links, tab sharing) uses the model and `ProcessedMessage`, and never looks inside a source's messages.
 
-The Skype adapter is [`src/sources/skype/`](src/sources/skype/). To support another app, add a folder with an adapter, register it in `src/sources/index.ts` and add its ID to `SourceId`.
+- Beyond text, a displayed message (`ProcessedMessage`, [`src/types/messages.ts`](src/types/messages.ts)) can carry a **caption**, a **quote**, an **attachment** (a voice message or file from the export), a **link** preview, a **location**, a **contact card** and **edited**/**forwarded** marks. They are optional, so a source that has none of them (Skype) is unaffected. `processForDisplay` also sanitizes `caption` and keeps a `link` only if it is an `http(s)` address.
+
+The adapters are [`src/sources/skype/`](src/sources/skype/) and [`src/sources/viber/`](src/sources/viber/). The Viber one keeps its messages as plain data with IDs as text and names looked up at load time, builds reactions from both places the export has them (`reactions.ts`), and keys media by its path in the export folder, compared in composed Unicode form so a name spelled differently by the file system still matches (`load.ts`, `media.ts`). Its tests use the exporter's own synthetic sample, copied to [`src/__tests__/fixtures/viberSample.json`](src/__tests__/fixtures/viberSample.json); keep it in step with `ViberPC-Export/tests/fixtures/viber_export_sample.json` when the format changes. To support another app, add a folder with an adapter, register it in `src/sources/index.ts` and add its ID to `SourceId`.
 
 ## 🤝 Contributing
 

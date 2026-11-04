@@ -103,6 +103,7 @@ async function parseStreamingFile(
   return new Promise((resolve, reject) => {
     let offset = 0;
     const chunks: string[] = [];
+    const decoder = new TextDecoder("utf-8");
     let lastProgressUpdate = 0;
 
     const readNextChunk = () => {
@@ -119,7 +120,11 @@ async function parseStreamingFile(
       };
 
       reader.onload = (e) => {
-        chunks.push(e.target?.result as string);
+        // One decoder for the whole file: it holds back the bytes of a character that a
+        // chunk boundary cuts in two, and completes it with the next chunk. Decoding each
+        // chunk on its own (readAsText) turned such a character into replacement characters.
+        const isLast = offset + FILE_CHUNK_SIZE >= file.size;
+        chunks.push(decoder.decode(e.target?.result as ArrayBuffer, { stream: !isLast }));
         offset += FILE_CHUNK_SIZE;
 
         // Throttle progress updates to avoid excessive re-renders
@@ -154,7 +159,7 @@ async function parseStreamingFile(
         }
       };
 
-      reader.readAsText(file.slice(offset, offset + FILE_CHUNK_SIZE));
+      reader.readAsArrayBuffer(file.slice(offset, offset + FILE_CHUNK_SIZE));
     };
 
     readNextChunk();

@@ -15,6 +15,8 @@ export function conversationLabel(conversation: ChatConversation): string | null
       const members = conversation.memberCount;
       return members ? `Group · ${members} ${members === 1 ? "person" : "people"}` : "Group";
     }
+    case "community":
+      return "Community";
     case "service":
       return "Service";
     default:
