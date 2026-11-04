@@ -5,6 +5,7 @@ import { MessageBubble } from "./MessageBubble";
 import type { ProcessedMessage } from "../../types/messages";
 import { filterMessages } from "../../utils/messageSearch";
 import { buildVirtualRows } from "../../utils/virtualRows";
+import { useLook } from "../../look";
 import {
   DEEP_LINK_MAX_SCROLL_FRAMES,
   DEEP_LINK_SETTLED_FRAMES,
@@ -38,6 +39,8 @@ interface MessageListProps {
   onScrollRequestComplete?: (requestId: number) => void;
   deepLinkHighlight?: DeepLinkHighlight | null;
   onCopyMessageLink?: (messageId: string) => Promise<boolean>;
+  /** A group or community conversation. */
+  isGroup?: boolean;
 }
 
 const DEEP_LINK_FLASH_ANIMATION = "chatlens-deeplink-flash";
@@ -54,7 +57,9 @@ export function MessageList({
   onScrollRequestComplete,
   deepLinkHighlight,
   onCopyMessageLink,
+  isGroup = false,
 }: MessageListProps) {
+  const look = useLook();
   const [flashedRequestId, setFlashedRequestId] = useState<number | null>(null);
 
   const filteredMessages = useMemo(() => {
@@ -213,16 +218,36 @@ export function MessageList({
               }}
             >
               {isDate ? (
-                <Box py={24} px={12}>
-                  <Divider
-                    label={
-                      <Text size="xs" fw={600} c="dimmed">
-                        {item.content as string}
-                      </Text>
-                    }
-                    labelPosition="center"
-                  />
-                </Box>
+                look.datePill ? (
+                  <Box py={14} px={12} ta="center" data-date-row>
+                    <Text
+                      component="span"
+                      size="xs"
+                      fw={600}
+                      c="dimmed"
+                      px={14}
+                      py={4}
+                      style={{
+                        display: "inline-block",
+                        borderRadius: 999,
+                        background: "light-dark(rgba(115, 96, 242, 0.1), rgba(255, 255, 255, 0.08))",
+                      }}
+                    >
+                      {item.content as string}
+                    </Text>
+                  </Box>
+                ) : (
+                  <Box py={24} px={12}>
+                    <Divider
+                      label={
+                        <Text size="xs" fw={600} c="dimmed">
+                          {item.content as string}
+                        </Text>
+                      }
+                      labelPosition="center"
+                    />
+                  </Box>
+                )
               ) : (
                 <div
                   data-message-id={message.id}
@@ -258,6 +283,7 @@ export function MessageList({
                       item.messageIndex !== undefined &&
                       item.messageIndex === highlightedMessageIndex
                     }
+                    isGroup={isGroup}
                     onCopyLink={onCopyMessageLink}
                   />
                 </div>

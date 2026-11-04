@@ -130,8 +130,9 @@ test("opens a Viber export folder and shows its chats and every kind of message"
 
   // A voice message plays from the export; a file downloads under its own name
   await open(page, DIRECT, "106");
-  const audio = message(page, "106").locator("audio[controls]");
+  const audio = message(page, "106").locator("[data-voice-player] audio");
   await expect(audio).toHaveAttribute("src", /^blob:/);
+  await expect(message(page, "106").getByRole("button", { name: "Play voice message" })).toBeVisible();
   await open(page, DIRECT, "107");
   const file = message(page, "107").locator('a[download="Quarterly report.pdf"]');
   await expect(file).toHaveAttribute("href", /^blob:/);
@@ -154,6 +155,12 @@ test("opens a Viber export folder and shows its chats and every kind of message"
   await expect(message(page, "201")).toContainText("Bob Example");
   await open(page, GROUP, "202");
   await expect(message(page, "202").locator("[data-quote]")).toHaveText("Who is in?");
+  // ...with an initials avatar beside the last message of each person's run
+  await open(page, GROUP, "203");
+  await expect(message(page, "203").locator("[data-avatar]")).toHaveText("AE");
+  // Clicking a quote goes to the message it quotes
+  await message(page, "202").locator("[data-quote]").click();
+  await expect(message(page, "201")).toHaveAttribute("data-deeplink-target", "true");
 
   // The link card was never fetched: nothing left the page
   expect(foreign).toEqual([]);
@@ -206,6 +213,6 @@ test("a report link to a Viber message copies the export, media included, once a
   // The next link reuses that tab, and its voice message plays there too
   await links.nth(1).click();
   await expect(linkedMessage(reportTab, "106")).toBeVisible();
-  await expect(linkedMessage(reportTab, "106").locator("audio[controls]")).toHaveAttribute("src", /^blob:/);
+  await expect(linkedMessage(reportTab, "106").locator("[data-voice-player] audio")).toHaveAttribute("src", /^blob:/);
   expect(context.pages()).toHaveLength(3);
 });

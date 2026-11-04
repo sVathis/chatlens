@@ -9,6 +9,8 @@ import {
   MESSAGE_TEXT_STYLE,
 } from "../../constants/messageBubble";
 import { highlightSearchMatch } from "../../utils/messageSearch";
+import { useLook } from "../../look";
+import { ViberMessageBubble } from "./ViberMessageBubble";
 import { CopyMessageLinkButton } from "./CopyMessageLinkButton";
 import { ReactionChips } from "./ReactionChips";
 import { AttachmentContent } from "./AttachmentContent";
@@ -21,7 +23,7 @@ import {
   TimeLine,
 } from "./MessageParts";
 
-interface MessageBubbleProps {
+export interface MessageBubbleProps {
   message: ProcessedMessage;
   showSender: boolean;
   showTimestamp: boolean;
@@ -29,10 +31,12 @@ interface MessageBubbleProps {
   userDisplayName?: string;
   searchQuery?: string;
   isHighlighted?: boolean;
+  /** A group or community: other people's messages get a sender name and an avatar (in looks that have them). */
+  isGroup?: boolean;
   onCopyLink?: (messageId: string) => Promise<boolean>;
 }
 
-function MessageBubbleComponent({
+function DefaultMessageBubble({
   message,
   showSender,
   showTimestamp,
@@ -289,6 +293,15 @@ function MessageBubbleComponent({
         )}
       </Stack>
     </Box>
+  );
+}
+
+function MessageBubbleComponent(props: MessageBubbleProps) {
+  const look = useLook();
+  return look.id === "viber" ? (
+    <ViberMessageBubble {...props} />
+  ) : (
+    <DefaultMessageBubble {...props} />
   );
 }
 

@@ -22,6 +22,7 @@ import {
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useMessageStore } from "../../store/messageStore";
 import { useSource } from "../../hooks/useSource";
+import { useLook } from "../../look";
 import type { MediaMetadata, MediaItem } from "../../types/messages";
 import { revokeObjectUrl } from "../../utils/urlManager";
 import { THUMBNAIL_SIZE } from "../../constants/media";
@@ -41,6 +42,7 @@ function MediaThumbnail({
 }: MediaThumbnailProps) {
   const { exportData } = useMessageStore();
   const { media } = useSource();
+  const look = useLook();
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
   const thumbnailLoadedRef = useRef(false);
@@ -113,7 +115,7 @@ function MediaThumbnail({
       onClick={onClick}
       style={{
         cursor: "pointer",
-        border: isActive ? "2px solid #0078d4" : "2px solid transparent",
+        border: isActive ? `2px solid ${look.accent}` : "2px solid transparent",
         borderRadius: "4px",
         overflow: "hidden",
         minWidth: `${THUMBNAIL_SIZE}px`,

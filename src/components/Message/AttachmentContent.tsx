@@ -1,6 +1,9 @@
-import { Text } from "@mantine/core";
+import { Box, Group, Text } from "@mantine/core";
+import { IconFile } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useSource } from "../../hooks/useSource";
+import { useLook } from "../../look";
+import { VoicePlayer } from "./VoicePlayer";
 import { useMessageStore } from "../../store/messageStore";
 import type { ProcessedMessage } from "../../types/messages";
 import { revokeObjectUrl } from "../../utils/urlManager";
@@ -22,6 +25,7 @@ export function AttachmentContent({
 }) {
   const { exportData } = useMessageStore();
   const { media } = useSource();
+  const look = useLook();
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,6 +55,10 @@ export function AttachmentContent({
 
   if (!url) return <>{fallback}</>;
 
+  if (attachment.kind === "audio" && look.voicePlayer) {
+    return <VoicePlayer url={url} durationMs={attachment.durationMs} accent={look.accent} />;
+  }
+
   if (attachment.kind === "audio") {
     return (
       <audio
@@ -60,6 +68,39 @@ export function AttachmentContent({
         aria-label="Voice message"
         style={{ maxWidth: "100%", height: 36 }}
       />
+    );
+  }
+
+  if (look.voicePlayer) {
+    // A file card: the file icon in the accent colour, and the name
+    return (
+      <a
+        href={url}
+        download={attachment.name}
+        data-file-card
+        style={{ color: "inherit", textDecoration: "none" }}
+      >
+        <Group gap={10} wrap="nowrap">
+          <Box
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: look.accent,
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <IconFile size={20} />
+          </Box>
+          <Text size="sm" fw={500} lineClamp={2} style={{ wordBreak: "break-word" }}>
+            {attachment.name ?? "Download file"}
+          </Text>
+        </Group>
+      </a>
     );
   }
 
