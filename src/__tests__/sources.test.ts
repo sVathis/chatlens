@@ -395,6 +395,14 @@ describe("what a Skype conversation is", () => {
   it("is told by the prefix of its ID", () => {
     expect(skypeConversationKind("19:abc@thread.skype")).toBe("group");
     expect(skypeConversationKind("19:abc@thread.v2")).toBe("group");
+    expect(skypeConversationKind("19:abc@thread.tacv2")).toBe("group");
+    expect(skypeConversationKind("19:ABC@Thread.Skype")).toBe("group"); // not case sensitive
+    // Teams-style chats share the 19: prefix but are with one person
+    expect(skypeConversationKind("19:aaaa_bbbb@unq.gbl.spaces")).toBe("direct");
+    expect(skypeConversationKind("19:abc@oneToOne.skype")).toBe("direct");
+    // A 19: ID with no ending that says which is not guessed
+    expect(skypeConversationKind("19:abc")).toBeUndefined();
+    expect(skypeConversationKind("19:abc@something.else")).toBeUndefined();
     expect(skypeConversationKind("8:live:.cid.abc")).toBe("direct");
     expect(skypeConversationKind("8:someone")).toBe("direct");
     expect(skypeConversationKind("4:+306900000000")).toBe("direct");
