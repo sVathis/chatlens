@@ -459,3 +459,21 @@ describe("what a Skype conversation is", () => {
     expect(conversationLabel(base)).toBeNull();
   });
 });
+
+describe("a conversation with no name", () => {
+  it("gets an empty title in the shared model, which promises text", () => {
+    const [nameless, named] = skypeSource.fromJson({
+      userId: OWNER_ID,
+      exportDate: "",
+      conversations: [
+        { ...conversation("8:live:.cid.a", []), displayName: null },
+        { ...conversation("8:live:.cid.b", []), displayName: "Someone" },
+      ],
+    }).conversations;
+
+    expect(nameless.title).toBe("");
+    expect(named.title).toBe("Someone");
+    // Whatever shows names takes the ID instead of failing on an empty one
+    expect(skypeSource.displayName(nameless.title)).toBeNull();
+  });
+});

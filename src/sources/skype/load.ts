@@ -115,7 +115,8 @@ export function toChatExport(data: SkypeExport): ChatExport {
       const kind = skypeConversationKind(conversation.id);
       return {
         id: conversation.id,
-        title: conversation.displayName,
+        // Some conversations have no name in the export (null), though the type says text
+        title: conversation.displayName ?? "",
         kind,
         memberCount: kind === "group" ? skypeMemberCount(conversation.threadProperties) : undefined,
         lastActivity: messages[0]?.originalarrivaltime ?? "",
