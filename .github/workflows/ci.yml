@@ -1,0 +1,100 @@
+name: CI
+
+# Runs the project's checks on every pull request and on pushes to main.
+# Independent of deploy.yml: the Pages deploy neither waits for nor depends on this workflow.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# A newer push to the same ref (PR branch or main) makes the older run redundant.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, tests, build and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Playwright needs Node 20+, and playwright.config.ts starts the Vite dev server
+      # with a plain `node` command.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The tools/ tests use only the standard library, so there is nothing to pip install.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests (vitest)
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Python tests (tools/)
+        run: python -m unittest discover tools -v
+
+      # The browsers are cached per Playwright version. The install step still runs on a
+      # cache hit: it skips the browser download, but the system libraries
+      # (--with-deps) live outside ~/.cache/ms-playwright and must be installed every run.
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          version=$(sed -nE 's/.*"@playwright\/test@([^"]+)".*/\1/p' bun.lock | head -n 1)
+          if [ -z "$version" ]; then
+            echo "Could not find the @playwright/test version in bun.lock" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium firefox
+
+      # playwright.config.ts defaults to the list reporter and no traces; the extra flags
+      # only add an HTML report and failure traces for the artifact below.
+      - name: Browser tests (Playwright)
+        id: e2e
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+        run: bun run test:e2e --reporter=list,html --trace=retain-on-failure
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() && steps.e2e.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
