@@ -5,6 +5,8 @@ import {
   LOAD_MORE_INCREMENT,
   REQUIRED_STABLE_FRAMES,
   MAX_SCROLL_FRAMES,
+  PIN_STABLE_FRAMES,
+  MAX_PIN_FRAMES,
 } from "../constants/messages";
 
 /**
@@ -55,28 +57,44 @@ export function useMessageScroll({
    * Auto-scrolls to bottom when conversation changes.
    * Waits for virtualizer to stabilise (scrollHeight stops changing) before scrolling
    * to ensure accurate positioning. Uses frame counting as fallback timeout.
+   *
+   * Once scrolled, it keeps the list at the bottom, frame by frame, until the height has
+   * stayed the same for PIN_STABLE_FRAMES frames. The virtualizer goes on measuring rows
+   * after the list first looks settled (on a busy machine, well after), which grows the
+   * list below the view; a single scroll, or one more after a fixed delay, then leaves the
+   * conversation open above its newest message. The pinning stops at once if the user
+   * scrolls, a deep link takes over, or another conversation is opened.
    */
   useEffect(() => {
-    if (!conversation || !scrollContainerRef.current) {
+    const scrollContainer = scrollContainerRef.current;
+    if (!conversation || !scrollContainer) {
       return;
     }
 
     let lastHeight = 0;
     let stableFrames = 0;
     let frameCount = 0;
+    let cancelled = false;
     const startGeneration = navigationLockRef.current.generation;
     // A deep link started (or is running) since this scroll was scheduled
     const navigationTookOver = () =>
       navigationLockRef.current.active ||
       navigationLockRef.current.generation !== startGeneration;
 
+    // Scrolling by the user (as opposed to by this hook, which fires none of these) ends it
+    const USER_INPUT = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
+    const stop = () => {
+      cancelled = true;
+    };
+    for (const type of USER_INPUT) scrollContainer.addEventListener(type, stop, { passive: true });
+
     const scrollToBottom = () => {
-      const scrollContainer = scrollContainerRef.current;
-      if (!scrollContainer || navigationTookOver()) {
+      const container = scrollContainerRef.current;
+      if (cancelled || !container || navigationTookOver()) {
         return;
       }
 
-      const currentHeight = scrollContainer.scrollHeight;
+      const currentHeight = container.scrollHeight;
       frameCount++;
 
       // Track consecutive frames with stable height (virtualizer has finished rendering)
@@ -87,22 +105,23 @@ export function useMessageScroll({
         lastHeight = currentHeight;
       }
 
-      // Scroll when height is stable or max frames reached (timeout fallback)
-      if (stableFrames >= REQUIRED_STABLE_FRAMES || frameCount >= MAX_SCROLL_FRAMES) {
-        const performScroll = () => {
-          if (scrollContainerRef.current && !navigationTookOver()) {
-            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-          }
-        };
-        // Perform scroll twice: immediately and after a short delay to handle any remaining layout shifts
-        performScroll();
-        setTimeout(performScroll, 100);
-      } else {
-        requestAnimationFrame(scrollToBottom);
+      // Scroll when height is stable or max frames reached (timeout fallback), and from
+      // then on whenever the list has grown below the view
+      const settled = stableFrames >= REQUIRED_STABLE_FRAMES || frameCount >= MAX_SCROLL_FRAMES;
+      if (settled) {
+        const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+        if (!atBottom) container.scrollTop = container.scrollHeight;
+        if (stableFrames >= PIN_STABLE_FRAMES || frameCount >= MAX_PIN_FRAMES) return;
       }
+      requestAnimationFrame(scrollToBottom);
     };
 
     requestAnimationFrame(scrollToBottom);
+
+    return () => {
+      cancelled = true;
+      for (const type of USER_INPUT) scrollContainer.removeEventListener(type, stop);
+    };
   }, [conversation, swapped, scrollContainerRef, navigationLockRef]);
 
   const loadMoreMessages = useCallback(() => {
