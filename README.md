@@ -125,6 +125,7 @@ https://svathis.github.io/chatlens/#conversationId=19%3Aabc.def_01%40thread.skyp
 - **Fresh tab while another ChatLens tab has the export loaded**: a tab whose export contains that message (not just the conversation) takes over.
   - If the fresh tab is the one `report.html` links open in (see below), it asks that tab for a copy of the export and shows a short code. The tab with the export asks you, showing the same code: **Allow copy** sends the export, and the fresh tab shows the message itself, so later report links open there without loading anything. Allow only when the codes match.
   - Any other fresh tab (e.g. from a `report.md` link or a pasted link) hands the link over: the tab with the export jumps to the message, and the fresh tab says so. Only the two IDs are passed, so this doesn't add another copy of the export.
+  - Tabs that were already open when you updated (or renamed from SkypeLens) still run the old code, which talks on the old channel names. They and updated tabs can't find each other or share an export, so reload every open tab once after updating.
   - If you click another link while the copy waits for your answer, the newest link wins. When a different tab holds it, that tab is asked instead and the first question is withdrawn. When no tab holds it, the copy is dropped and the report's tab says so; it keeps the newest link, ready for you to load the export.
 
 #### How the export copy is protected
