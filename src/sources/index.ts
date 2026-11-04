@@ -5,9 +5,11 @@ import { withReactions } from "../utils/reactions";
 import { sanitizeProcessedMessage } from "../utils/sanitizeHtml";
 import { skypeSource } from "./skype";
 import type { ProcessOptions, SourceAdapter } from "./types";
+import { viberSource } from "./viber";
 
 const SOURCES: Record<SourceId, SourceAdapter> = {
   skype: skypeSource,
+  viber: viberSource,
 };
 
 // When nothing recognises an upload, this source reports why in its own words

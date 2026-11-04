@@ -290,23 +290,34 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
             onClick={handleOpenViewer}
           >
             <Box style={{ position: "relative", display: "inline-block" }}>
-              <img
-                src={thumbnailUrl || mediaUrl || ""}
-                alt={metadata?.filename || "Shared video"}
-                onLoad={() => {
-                  thumbLoadedRef.current = true;
-                }}
-                onError={(e) => {
-                  thumbLoadedRef.current = true;
-                  console.error("[MediaMessage] Thumbnail load error:", {
-                    error: e,
-                    mediaId,
-                    thumbnailUrl,
-                    mediaType,
-                  });
-                }}
-                style={MEDIA_IMAGE_STYLE}
-              />
+              {thumbnailUrl ? (
+                <img
+                  src={thumbnailUrl}
+                  alt={metadata?.filename || "Shared video"}
+                  onLoad={() => {
+                    thumbLoadedRef.current = true;
+                  }}
+                  onError={(e) => {
+                    thumbLoadedRef.current = true;
+                    console.error("[MediaMessage] Thumbnail load error:", {
+                      error: e,
+                      mediaId,
+                      thumbnailUrl,
+                      mediaType,
+                    });
+                  }}
+                  style={MEDIA_IMAGE_STYLE}
+                />
+              ) : (
+                // No still image in the export (Viber's): the first frame of the video itself
+                <video
+                  src={mediaUrl}
+                  preload="metadata"
+                  muted
+                  aria-label={metadata?.filename || "Shared video"}
+                  style={MEDIA_IMAGE_STYLE}
+                />
+              )}
               <Box style={playButtonStyle}>
                 <IconPlayerPlayFilled size={PLAY_ICON_SIZE} color="white" />
               </Box>

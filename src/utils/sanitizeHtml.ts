@@ -19,8 +19,26 @@ export function sanitizeMessageHtml(html: string): string {
   return html ? DOMPurify.sanitize(html, MESSAGE_HTML_CONFIG) : "";
 }
 
-/** The same message with its content sanitized (the message itself when already safe). */
+/** Whether a URL is a plain web address (http or https), the only kind shown as a link. */
+export function isWebUrl(url: string): boolean {
+  return /^https?:\/\/[^\s]+$/i.test(url);
+}
+
+/**
+ * The same message made safe to render: its HTML (`content` and `caption`) sanitized, and
+ * a link kept only if it is a web address. The message itself when it was already safe.
+ */
 export function sanitizeProcessedMessage(message: ProcessedMessage): ProcessedMessage {
   const content = sanitizeMessageHtml(message.content);
-  return content === message.content ? message : { ...message, content };
+  const caption = message.caption === undefined ? undefined : sanitizeMessageHtml(message.caption);
+  const link = message.link && isWebUrl(message.link.url) ? message.link : undefined;
+
+  if (content === message.content && caption === message.caption && link === message.link) {
+    return message;
+  }
+  const safe: ProcessedMessage = { ...message, content };
+  if (caption !== undefined) safe.caption = caption;
+  if (link) safe.link = link;
+  else delete safe.link;
+  return safe;
 }

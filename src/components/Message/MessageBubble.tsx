@@ -11,6 +11,15 @@ import {
 import { highlightSearchMatch } from "../../utils/messageSearch";
 import { CopyMessageLinkButton } from "./CopyMessageLinkButton";
 import { ReactionChips } from "./ReactionChips";
+import { AttachmentContent } from "./AttachmentContent";
+import {
+  ContactLine,
+  ForwardedNote,
+  LinkCard,
+  LocationLine,
+  QuoteBlock,
+  TimeLine,
+} from "./MessageParts";
 
 interface MessageBubbleProps {
   message: ProcessedMessage;
@@ -66,20 +75,29 @@ function MessageBubbleComponent({
               {displayName}
             </Text>
           )}
+          {message.forwarded && <ForwardedNote />}
           <Box pos="relative" maw="100%">
             <MediaMessage mediaId={message.mediaUrl} isOwner={message.isOwner} />
             {copyLink(sidePlacement)}
           </Box>
-          {showTimestamp && (
+          {message.caption && (
             <Text
-              size="xs"
-              c="dimmed"
-              mt={2}
+              size="sm"
+              mt={4}
               ml={4}
-              opacity={0.7}
-              dangerouslySetInnerHTML={{
-                __html: formatMessageTime(message.timestamp),
-              }}
+              maw="70%"
+              style={MESSAGE_TEXT_STYLE}
+              dangerouslySetInnerHTML={{ __html: message.caption }}
+            />
+          )}
+          {message.reactions && (
+            <ReactionChips reactions={message.reactions} align={message.isOwner ? "end" : "start"} />
+          )}
+          {showTimestamp && (
+            <TimeLine
+              mt={2}
+              edited={message.edited}
+              timestampHtml={formatMessageTime(message.timestamp)}
             />
           )}
         </Stack>
@@ -181,6 +199,31 @@ function MessageBubbleComponent({
     );
   }
 
+  const textColor = message.isOwner
+    ? "white"
+    : "light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-0))";
+  const contentText = (
+    <Text
+      c={textColor}
+      size="sm"
+      style={MESSAGE_TEXT_STYLE}
+      dangerouslySetInnerHTML={{
+        __html: highlightedContent,
+      }}
+    />
+  );
+  // A voice message or file is played or downloaded when its file is in the export
+  const bodyText =
+    message.attachment?.key !== undefined ? (
+      <AttachmentContent
+        attachment={{ ...message.attachment, key: message.attachment.key }}
+        fallback={contentText}
+        color={message.isOwner ? "white" : undefined}
+      />
+    ) : (
+      contentText
+    );
+
   return (
     <Box w="100%" pt={showSender ? 10 : 3} pb={3}>
       <Stack
@@ -213,30 +256,31 @@ function MessageBubbleComponent({
               : {}),
           }}
         >
-          <Text
-            c={
-              message.isOwner
-                ? "white"
-                : "light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-0))"
-            }
-            size="sm"
-            style={MESSAGE_TEXT_STYLE}
-            dangerouslySetInnerHTML={{
-              __html: highlightedContent,
-            }}
-          />
+          {message.forwarded && <ForwardedNote />}
+          {message.quote && <QuoteBlock quote={message.quote} />}
+          {bodyText}
+          {message.link && <LinkCard link={message.link} />}
+          {message.location && <LocationLine location={message.location} />}
+          {message.contactCard && <ContactLine card={message.contactCard} />}
+          {message.caption && (
+            <Text
+              c={textColor}
+              size="sm"
+              mt={4}
+              style={MESSAGE_TEXT_STYLE}
+              dangerouslySetInnerHTML={{ __html: message.caption }}
+            />
+          )}
           {copyLink(sidePlacement)}
         </Paper>
+        {message.reactions && (
+          <ReactionChips reactions={message.reactions} align={message.isOwner ? "end" : "start"} />
+        )}
         {showTimestamp && (
-          <Text
-            size="xs"
-            c="dimmed"
+          <TimeLine
             mt={3}
-            ml={4}
-            style={{ opacity: 0.7 }}
-            dangerouslySetInnerHTML={{
-              __html: formatMessageTime(message.timestamp),
-            }}
+            edited={message.edited}
+            timestampHtml={formatMessageTime(message.timestamp)}
           />
         )}
       </Stack>

@@ -16,6 +16,22 @@ export interface ProcessedMessage {
   mergedIds?: string[];
   /** Emoji sent in reaction to this message (see ChatConversation.reactions). */
   reactions?: Reaction[];
+
+  // What some sources' messages carry beyond text. Text in these is plain (the renderer
+  // escapes it); `caption` is HTML, sanitized by processForDisplay like `content`.
+
+  /** Text shown under a media message. */
+  caption?: string;
+  /** The message this one replies to. `messageId` is set when it is in the conversation. */
+  quote?: { text: string; messageId?: string };
+  /** A voice message or a file, whose content is the file under `key` in the export. */
+  attachment?: { kind: "audio" | "file"; key?: string; name?: string; durationMs?: number };
+  /** A link with a preview. Only http and https URLs are kept. */
+  link?: { url: string; title?: string };
+  location?: { lat: number; lon: number };
+  contactCard?: { name?: string; number?: string };
+  edited?: boolean;
+  forwarded?: boolean;
 }
 
 export interface MediaMetadata {

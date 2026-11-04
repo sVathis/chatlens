@@ -81,10 +81,10 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
 
     setError(null);
     setIsProcessing(true);
-    setFileName("Skype Export Directory");
+    setFileName("Export Directory");
 
     try {
-      // loadExportFolder reads the export (e.g. messages.json) and builds a map of media files
+      // loadExportFolder reads the export (messages.json or viber_export.json) and builds a map of media files
       // Media files are indexed by their ID for efficient lookup during message rendering
       const data = await loadExportFolder(Array.from(files), setProgress);
 
@@ -102,7 +102,7 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
   }
 
   if (isProcessing) {
-    const isDirectory = fileName === "Skype Export Directory";
+    const isDirectory = fileName === "Export Directory";
     const stageText = progress < 95 ? "Reading file..." : "Parsing JSON...";
     
     return (
@@ -208,7 +208,7 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
               margin: 0,
             }}
           >
-            Skype
+            Chat
           </Text>
           <Text 
             size="2rem" 
@@ -225,10 +225,10 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
           </Text>
         </Group>
         <Title order={2} ta="center" fw={600}>
-          Upload Your Skype Data
+          Upload Your Chat Export
         </Title>
         <Text size="sm" c="dimmed" ta="center">
-          Choose how you want to upload your Skype export
+          Choose how you want to upload your Skype or Viber export
         </Text>
       </Stack>
 
@@ -278,10 +278,10 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
                 />
                 <Stack gap={4} style={{ flex: 1 }}>
                   <Text fw={600} size="lg">
-                    Upload messages.json File
+                    Upload JSON File
                   </Text>
                   <Text size="sm" c="dimmed">
-                    Full export or a single extracted conversation (no media files)
+                    messages.json (Skype) or viber_export.json (Viber), without media files
                   </Text>
                 </Stack>
               </Group>
@@ -295,7 +295,7 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
                   style={{ color: "var(--mantine-color-dimmed)" }}
                 />
                 <Text size="sm" c="dimmed" ta="center">
-                  Drag & drop or click to select messages.json
+                  Drag & drop or click to select the file
                 </Text>
               </Group>
             </Stack>
@@ -363,7 +363,7 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
 
       {/* 
         Directory input uses webkitdirectory attribute to allow folder selection.
-        This enables users to upload the entire Skype export directory including media files.
+        This enables users to upload the entire export directory including media files.
         The webkitdirectory attribute is supported in all modern browsers despite not being in TypeScript types.
       */}
       <input
