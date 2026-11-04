@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, startTransition } from "react";
-import type { Conversation } from "../types/messages";
+import type { ChatConversation } from "../model/chat";
 import {
   SCROLL_THRESHOLD,
   LOAD_MORE_INCREMENT,
@@ -18,7 +18,7 @@ export interface NavigationScrollLock {
 
 interface UseMessageScrollProps {
   scrollContainerRef: React.RefObject<HTMLDivElement>;
-  conversation: Conversation | null;
+  conversation: ChatConversation | null;
   loadedMessageCount: number;
   isLoadingMore: boolean;
   swapped: boolean;
@@ -115,7 +115,7 @@ export function useMessageScroll({
     startTransition(() => {
       setIsLoadingMore(true);
       setLoadedMessageCount((prev) =>
-        Math.min(prev + LOAD_MORE_INCREMENT, conversation.MessageList.length),
+        Math.min(prev + LOAD_MORE_INCREMENT, conversation.messages.length),
       );
     });
   }, [conversation, isLoadingMore, setLoadedMessageCount, scrollContainerRef, setIsLoadingMore]);
@@ -141,7 +141,7 @@ export function useMessageScroll({
     // Load more when scrolled near top and not all messages are loaded
     const shouldLoadMore =
       scrollTop < SCROLL_THRESHOLD &&
-      loadedMessageCount < conversation.MessageList.length;
+      loadedMessageCount < conversation.messages.length;
 
     if (shouldLoadMore) {
       loadMoreMessages();

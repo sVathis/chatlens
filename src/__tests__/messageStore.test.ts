@@ -24,7 +24,7 @@ describe("deep-link navigation state", () => {
     expect(store().requestedDeepLink).toEqual({ conversationId: CONVERSATION_ID, messageId });
     expect(store().navigationTarget).toBeNull();
 
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
 
     // Kept, so a replaced export can re-resolve it
     expect(store().requestedDeepLink).toEqual({ conversationId: CONVERSATION_ID, messageId });
@@ -38,7 +38,7 @@ describe("deep-link navigation state", () => {
   });
 
   it("resolves a link immediately when the export is already loaded", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     store().selectConversation(GROUP_CONVERSATION_ID);
 
     store().requestNavigation({ conversationId: CONVERSATION_ID, messageId: messageIdFor(0) });
@@ -49,14 +49,14 @@ describe("deep-link navigation state", () => {
   });
 
   it("opens a conversation without a message ID", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     store().requestNavigation({ conversationId: GROUP_CONVERSATION_ID, messageId: null });
     expect(store().selectedConversationId).toBe(GROUP_CONVERSATION_ID);
     expect(store().navigationTarget).toBeNull();
   });
 
   it("reports an unknown conversation without changing the selection", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     const before = store().selectedConversationId;
 
     store().requestNavigation({ conversationId: "8:live:unknown", messageId: "1" });
@@ -68,13 +68,13 @@ describe("deep-link navigation state", () => {
   });
 
   it("reports a conversation that has no messages", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     store().requestNavigation({ conversationId: "8:live:.cid.synthetic-empty", messageId: "1" });
     expect(store().navigationError?.kind).toBe("conversation-empty");
   });
 
   it("reports an unknown message instead of highlighting another one", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     store().requestNavigation({ conversationId: CONVERSATION_ID, messageId: "999" });
 
     expect(store().selectedConversationId).toBe(CONVERSATION_ID);
@@ -83,7 +83,7 @@ describe("deep-link navigation state", () => {
   });
 
   it("only completes the navigation request that is current", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     store().requestNavigation({ conversationId: CONVERSATION_ID, messageId: messageIdFor(1) });
     const first = store().navigationTarget!.requestId;
     store().requestNavigation({ conversationId: CONVERSATION_ID, messageId: messageIdFor(2) });
@@ -101,7 +101,7 @@ describe("deep-link navigation state", () => {
   });
 
   it("drops the target when the user opens another conversation", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     store().requestNavigation({ conversationId: CONVERSATION_ID, messageId: messageIdFor(3) });
     store().selectConversation(CONVERSATION_ID);
     expect(store().navigationTarget).not.toBeNull();
@@ -115,7 +115,7 @@ describe("replacing the export", () => {
 
   it("re-resolves the URL's link when the first export lacked the message", () => {
     store().requestNavigation(link);
-    store().setExportData(createSyntheticExport(500).exportData); // older export
+    store().setExportData(createSyntheticExport(500).chatExport); // older export
     expect(store().navigationError?.kind).toBe("message-not-found");
     expect(store().requestedDeepLink).toEqual(link);
 
@@ -124,7 +124,7 @@ describe("replacing the export", () => {
     expect(store().navigationError).toBeNull();
     expect(store().requestedDeepLink).toEqual(link);
 
-    store().setExportData(createSyntheticExport(1_000).exportData);
+    store().setExportData(createSyntheticExport(1_000).chatExport);
     expect(store().navigationError).toBeNull();
     expect(store().navigationTarget).toMatchObject({
       messageId: messageIdFor(800),
@@ -134,22 +134,22 @@ describe("replacing the export", () => {
   });
 
   it("re-resolves when an export is replaced without unloading first", () => {
-    store().setExportData(createSyntheticExport(500).exportData);
+    store().setExportData(createSyntheticExport(500).chatExport);
     store().requestNavigation(link);
     expect(store().navigationError?.kind).toBe("message-not-found");
 
-    store().setExportData(createSyntheticExport(1_000).exportData);
+    store().setExportData(createSyntheticExport(1_000).chatExport);
     expect(store().navigationTarget?.messageId).toBe(messageIdFor(800));
   });
 
   it("follows conversation clicks, which replace the link in the URL", () => {
-    store().setExportData(createSyntheticExport(500).exportData);
+    store().setExportData(createSyntheticExport(500).chatExport);
     store().requestNavigation(link);
     // What useOpenConversation does for a sidebar click
     store().requestNavigation({ conversationId: GROUP_CONVERSATION_ID, messageId: null });
     expect(store().requestedDeepLink).toEqual({ conversationId: GROUP_CONVERSATION_ID, messageId: null });
 
-    store().setExportData(createSyntheticExport(1_000).exportData);
+    store().setExportData(createSyntheticExport(1_000).chatExport);
     expect(store().selectedConversationId).toBe(GROUP_CONVERSATION_ID);
     expect(store().navigationTarget).toBeNull();
   });
@@ -157,7 +157,7 @@ describe("replacing the export", () => {
 
 describe("applyLocationToStore", () => {
   it("follows the URL as it changes (Back/Forward)", () => {
-    store().setExportData(createSyntheticExport(COUNT).exportData);
+    store().setExportData(createSyntheticExport(COUNT).chatExport);
     const params = (n: number) =>
       `conversationId=${encodeURIComponent(CONVERSATION_ID)}&messageId=${messageIdFor(n)}`;
 

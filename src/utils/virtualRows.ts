@@ -1,5 +1,5 @@
 import type { ProcessedMessage } from "../types/messages";
-import { groupMessagesByDate, shouldGroupWithPrevious } from "./messageProcessor";
+import { groupMessagesByDate, shouldGroupWithPrevious } from "./messageGrouping";
 
 export interface VirtualRow {
   /** Stable key so virtualizer measurements survive older messages being prepended. */

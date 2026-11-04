@@ -1,7 +1,7 @@
 import { isDeepLinkTarget, type DeepLinkTarget } from "./deepLink";
 import type { ExportBroker, PortLike } from "./exportBroker";
 import { randomCode, randomId } from "./random";
-import type { SkypeExport } from "../types/messages";
+import type { ChatExport } from "../model/chat";
 
 /**
  * Passes deep links, and with the user's approval the loaded export, between
@@ -31,7 +31,7 @@ type BridgeMessage =
  */
 type TransferMessage =
   | { type: "approved" }
-  | { type: "export"; data: SkypeExport }
+  | { type: "export"; data: ChatExport }
   | { type: "declined" | "busy" | "export-error" };
 
 export type ExportCopyFailure =
@@ -61,9 +61,9 @@ export interface ExportTransferOptions {
   /** Whether this tab takes a copy of the export instead of handing the link over. */
   wantsExport: () => boolean;
   /** The export this tab can copy to another tab. */
-  getExport: () => SkypeExport | null;
+  getExport: () => ChatExport | null;
   /** Whether a received export can show the link. */
-  exportHas: (data: SkypeExport, target: DeepLinkTarget) => boolean;
+  exportHas: (data: ChatExport, target: DeepLinkTarget) => boolean;
   /**
    * Asks the user whether to send this tab's export to the tab showing `code`.
    * `signal` aborts when the asking tab gives up; the answer is then ignored.
@@ -74,7 +74,7 @@ export interface ExportTransferOptions {
   ) => Promise<boolean>;
   /** Progress in the receiving tab. */
   onCopyStateChange: (state: ExportCopyState) => void;
-  onExportReceived: (data: SkypeExport) => void;
+  onExportReceived: (data: ChatExport) => void;
   /** How long to wait for the user to answer in the other tab. */
   approvalTimeoutMs?: number;
   /** How long to wait for the copy once allowed; cloning a large export takes seconds. */
@@ -114,11 +114,12 @@ const MAX_CLAIMS = 100;
 const DEFAULT_APPROVAL_TIMEOUT_MS = 120_000;
 const DEFAULT_COPY_TIMEOUT_MS = 60_000;
 
-function isExport(value: unknown): value is SkypeExport {
+function isExport(value: unknown): value is ChatExport {
   if (!value || typeof value !== "object") return false;
-  const { userId, conversations, mediaFiles } = value as Record<string, unknown>;
+  const { source, ownerId, conversations, mediaFiles } = value as Record<string, unknown>;
   return (
-    typeof userId === "string" &&
+    typeof source === "string" &&
+    typeof ownerId === "string" &&
     Array.isArray(conversations) &&
     (mediaFiles === undefined || mediaFiles instanceof Map)
   );

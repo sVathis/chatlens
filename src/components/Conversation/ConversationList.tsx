@@ -6,10 +6,10 @@ import {
   useExportData,
 } from "../../store/messageStore";
 import { useOpenConversation } from "../../hooks/useDeepLinkNavigation";
+import { useSource } from "../../hooks/useSource";
 import { formatRelativeTime } from "../../utils/dateFormat";
-import { getMessagePreview } from "../../utils/messageProcessor";
-import { cleanDisplayName } from "../../utils/displayName";
-import type { Conversation } from "../../types/messages";
+import type { ChatConversation } from "../../model/chat";
+import type { SourceAdapter } from "../../sources/types";
 
 interface ConversationListProps {
 	searchQuery: string;
@@ -18,24 +18,21 @@ interface ConversationListProps {
 const ConversationItem = memo(function ConversationItem({
 	conversation,
 	isSelected,
-	userId,
+	ownerId,
+	source,
 	onSelect,
 }: {
-	conversation: Conversation;
+	conversation: ChatConversation;
 	isSelected: boolean;
-	userId: string;
+	ownerId: string;
+	source: SourceAdapter;
 	onSelect: (id: string) => void;
 }) {
-	const messages = conversation.MessageList;
-	const messageCount = messages.length;
-	const lastMessageIndex = messages.length - 1;
-	const lastMessage = messages[lastMessageIndex];
-	const secondLastMessage = messages[lastMessageIndex - 1];
-
-	const preview = lastMessage ? getMessagePreview(lastMessage, userId, secondLastMessage) : "";
+	const messageCount = conversation.messages.length;
+	const preview = source.preview(conversation.messages, ownerId);
 	const handleClick = () => onSelect(conversation.id);
 
-	const displayName = cleanDisplayName(conversation.displayName) || cleanDisplayName(conversation.id) || conversation.id;
+	const displayName = source.displayName(conversation.title) || source.displayName(conversation.id) || conversation.id;
 
 	return (
 		<UnstyledButton
@@ -79,13 +76,13 @@ const ConversationItem = memo(function ConversationItem({
 							{messageCount}
 						</Badge>
 					</Group>
-					{lastMessage && (
+					{conversation.lastActivity && (
 						<Text
 							size="xs"
 							c="dimmed"
 							style={{ whiteSpace: "nowrap", flexShrink: 0 }}
 							dangerouslySetInnerHTML={{
-								__html: formatRelativeTime(lastMessage.originalarrivaltime),
+								__html: formatRelativeTime(conversation.lastActivity),
 							}}
 						/>
 					)}
@@ -105,13 +102,14 @@ export function ConversationList({ searchQuery }: ConversationListProps) {
 	const openConversation = useOpenConversation();
 	const selectedConversationId = useSelectedConversationId();
 	const exportData = useExportData();
+	const source = useSource();
 
 	const filteredConversations = useMemo(() => {
 		if (!searchQuery.trim()) return conversations;
 
 		const query = searchQuery.toLowerCase().trim();
 		return conversations.filter((c) => {
-			const name = c.displayName || c.id;
+			const name = c.title || c.id;
 			return name.toLowerCase().includes(query);
 		});
 	}, [conversations, searchQuery]);
@@ -131,7 +129,8 @@ export function ConversationList({ searchQuery }: ConversationListProps) {
 					key={conversation.id}
 					conversation={conversation}
 					isSelected={conversation.id === selectedConversationId}
-					userId={exportData?.userId || ""}
+					ownerId={exportData?.ownerId || ""}
+					source={source}
 					onSelect={openConversation}
 				/>
 			))}

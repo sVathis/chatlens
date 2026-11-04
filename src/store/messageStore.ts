@@ -1,9 +1,6 @@
 import { create } from "zustand";
-import type {
-  Conversation,
-  SkypeExport,
-  ProcessedMessage,
-} from "../types/messages";
+import type { ChatConversation, ChatExport } from "../model/chat";
+import type { ProcessedMessage } from "../types/messages";
 import { debugLog } from "../utils/debug";
 import type { DeepLinkTarget } from "../utils/deepLink";
 import { findRawMessageIndex } from "../utils/messageLocator";
@@ -31,18 +28,18 @@ export interface NavigationTarget {
   /** Increments for every navigation, so repeated links to the same message re-run. */
   requestId: number;
   conversationId: string;
-  /** Original Skype message ID that was requested. */
+  /** Original message ID that was requested. */
   messageId: string;
-  /** Position of the message in `Conversation.MessageList`. */
+  /** Position of the message in `ChatConversation.messages`. */
   rawIndex: number;
   /** "pending" until the message list has scrolled to and highlighted the target. */
   status: "pending" | "done";
 }
 
 interface MessageStore {
-  conversations: Conversation[];
+  conversations: ChatConversation[];
   selectedConversationId: string | null;
-  exportData: SkypeExport | null;
+  exportData: ChatExport | null;
   swappedRoles: Record<string, boolean>;
   processedMessagesCache: ProcessedMessagesCache;
   /**
@@ -54,11 +51,11 @@ interface MessageStore {
   navigationTarget: NavigationTarget | null;
   navigationError: NavigationError | null;
   navigationRequestCount: number;
-  setExportData: (data: SkypeExport) => void;
+  setExportData: (data: ChatExport) => void;
   /** Forgets the loaded export (to load another one); keeps the requested link. */
   unloadExport: () => void;
   selectConversation: (id: string) => void;
-  getSelectedConversation: () => Conversation | null;
+  getSelectedConversation: () => ChatConversation | null;
   toggleRoleSwap: (conversationId: string) => void;
   isRoleSwapped: (conversationId: string) => boolean;
   cacheProcessedMessages: (
@@ -92,8 +89,8 @@ type NavigationState = Pick<
  */
 function resolveDeepLink(
   target: DeepLinkTarget,
-  exportData: SkypeExport,
-  conversations: Conversation[],
+  exportData: ChatExport,
+  conversations: ChatConversation[],
   currentSelection: string | null,
   requestCount: number,
 ): NavigationState {
@@ -127,7 +124,7 @@ function resolveDeepLink(
     return { ...base, selectedConversationId: conversation.id, navigationError: null };
   }
 
-  const rawIndex = findRawMessageIndex(conversation.MessageList, target.messageId);
+  const rawIndex = findRawMessageIndex(conversation.messages, target.messageId);
   if (rawIndex === -1) {
     return {
       ...base,
@@ -172,20 +169,13 @@ export const useMessageStore = create<MessageStore>((set, get) => ({
 
   setExportData: (data) => {
     const filteredConversations = data.conversations.filter(
-      (conv) => conv.MessageList?.length > 0,
+      (conv) => conv.messages?.length > 0,
     );
 
-    filteredConversations.sort((a, b) => {
-      const aLastMessage = a.MessageList[a.MessageList.length - 1];
-      const bLastMessage = b.MessageList[b.MessageList.length - 1];
-
-      if (!aLastMessage) return 1;
-      if (!bLastMessage) return -1;
-
-      const aTime = new Date(aLastMessage.originalarrivaltime).getTime();
-      const bTime = new Date(bLastMessage.originalarrivaltime).getTime();
-      return bTime - aTime;
-    });
+    // Most recently active first
+    filteredConversations.sort(
+      (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime(),
+    );
 
     const selectedId = filteredConversations[0]?.id || null;
     const { requestedDeepLink, navigationRequestCount, navigationError } = get();

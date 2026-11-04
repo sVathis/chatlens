@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSkypeExport, parseJsonFile } from "../utils/fileParser";
+import { normalizeSkypeExport } from "../sources/skype/load";
+import { loadExportJson } from "../sources";
 import {
   CONVERSATION_ID,
   OWNER_ID,
@@ -56,8 +57,9 @@ describe("normalizeSkypeExport", () => {
     const file = new File([JSON.stringify(conversation)], "conversation.json", {
       type: "application/json",
     });
-    const data = await parseJsonFile(file, () => {});
+    const data = await loadExportJson(file, () => {});
     expect(data.conversations[0].id).toBe(CONVERSATION_ID);
-    expect(data.userId).toBe(OWNER_ID);
+    expect(data.source).toBe("skype");
+    expect(data.ownerId).toBe(OWNER_ID);
   });
 });

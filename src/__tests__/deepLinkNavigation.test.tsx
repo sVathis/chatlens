@@ -4,7 +4,7 @@ import { MantineProvider } from "@mantine/core";
 import { MainContent } from "../components/Layout/MainContent";
 import { useMessageStore } from "../store/messageStore";
 import { buildDeepLinkUrl, parseDeepLinkLocation } from "../utils/deepLink";
-import { normalizeSkypeExport } from "../utils/fileParser";
+import { skypeSource } from "../sources/skype";
 import {
   CONVERSATION_ID,
   GROUP_CONVERSATION_ID,
@@ -22,7 +22,7 @@ import {
 const COUNT = 10_000;
 const initialState = useMessageStore.getState();
 const store = () => useMessageStore.getState();
-const { exportData, special } = createSyntheticExport(COUNT);
+const { chatExport: exportData, special } = createSyntheticExport(COUNT);
 
 let uninstallLayout: () => void;
 let root: Root | null = null;
@@ -222,7 +222,7 @@ describe("deep-link navigation in the message view", () => {
     await renderWithExport();
     store().selectConversation(CONVERSATION_ID);
     await waitFor(() => container().scrollTop > 0, "main conversation at bottom");
-    const groupMessageId = exportData.conversations[0].MessageList[90].id;
+    const groupMessageId = exportData.conversations[0].messages[90].id;
     navigateInPage(
       buildDeepLinkUrl(
         { conversationId: GROUP_CONVERSATION_ID, messageId: groupMessageId },
@@ -258,7 +258,7 @@ describe("deep-link navigation in the message view", () => {
     await waitFor(() => text().includes("Load the export to open this link"), "upload notice");
 
     // First the user loads an older export, which doesn't have the message yet
-    store().setExportData(createSyntheticExport(500).exportData);
+    store().setExportData(createSyntheticExport(500).chatExport);
     await waitFor(() => text().includes(`Message "${messageIdFor(n)}" was not found`), "error");
     expect(highlighted()).toBeNull();
 
@@ -272,7 +272,7 @@ describe("deep-link navigation in the message view", () => {
     // Then the newer extraction: a single conversation object, as the analysis pipeline produces
     const { conversation } = createSyntheticConversation(1_000);
     const bare = JSON.parse(JSON.stringify(conversation));
-    store().setExportData(normalizeSkypeExport(bare));
+    store().setExportData(skypeSource.fromJson(bare));
 
     await waitForNavigation(messageIdFor(n));
     expect(highlighted()?.dataset.messageId).toBe(messageIdFor(n));
@@ -354,7 +354,7 @@ describe("deep-link navigation in the message view", () => {
   });
 
   it("stays responsive with 12,000 messages", async () => {
-    const big = createSyntheticExport(12_000).exportData;
+    const big = createSyntheticExport(12_000).chatExport;
     const n = 300; // raw index 11,699
     window.history.replaceState(null, "", linkTo(n));
     renderApp();
