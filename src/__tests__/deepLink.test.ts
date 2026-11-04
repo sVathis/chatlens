@@ -38,11 +38,11 @@ describe("deep link URLs", () => {
   it("keeps host, port, sub-path and unrelated query of the base URL, replacing the hash", () => {
     const url = buildDeepLinkUrl(
       { conversationId: "a:b", messageId: "c.d" },
-      "https://example.github.io:8443/skypelens/?theme=dark#stale",
+      "https://example.github.io:8443/chatlens/?theme=dark#stale",
     );
     const parsed = new URL(url);
     expect(parsed.origin).toBe("https://example.github.io:8443");
-    expect(parsed.pathname).toBe("/skypelens/");
+    expect(parsed.pathname).toBe("/chatlens/");
     expect(parsed.hash).toBe("#conversationId=a%3Ab&messageId=c.d");
     expect(parsed.search).toBe("?theme=dark");
   });
@@ -109,7 +109,7 @@ describe("deep link URLs", () => {
           messageId: testCase.message_id,
         },
       });
-      // SkypeLens builds an equivalent link for the same base URL. Everything before the
+      // ChatLens builds an equivalent link for the same base URL. Everything before the
       // "#" must match exactly, or following a report link would reload an open tab.
       const rebuilt = buildDeepLinkUrl(
         parsed.kind === "valid" ? parsed.target : TRICKY_IDS[0],

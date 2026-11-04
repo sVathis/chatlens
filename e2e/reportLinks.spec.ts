@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { expect, test } from "@playwright/test";
-import { SKYPELENS_E2E_BASE_URL } from "../playwright.config";
+import { CHATLENS_E2E_BASE_URL } from "../playwright.config";
 import type { DeepLinkTarget } from "../src/utils/deepLink";
 import {
   CONVERSATION_ID,
@@ -21,12 +21,12 @@ const FINDINGS: DeepLinkTarget[] = [
 ];
 
 for (const baseUrl of [
-  SKYPELENS_E2E_BASE_URL,
-  // SkypeLens rewrites its own URL when a conversation is opened from the sidebar; the
+  CHATLENS_E2E_BASE_URL,
+  // ChatLens rewrites its own URL when a conversation is opened from the sidebar; the
   // query must keep "%20" (not "+") so that it still matches the report links
-  `${SKYPELENS_E2E_BASE_URL}?note=a%20b`,
+  `${CHATLENS_E2E_BASE_URL}?note=a%20b`,
 ]) {
-  test(`report links reuse one SkypeLens tab and keep the loaded export (${baseUrl})`, async ({
+  test(`report links reuse one ChatLens tab and keep the loaded export (${baseUrl})`, async ({
     context,
     page: report,
   }, testInfo) => {
@@ -40,39 +40,39 @@ for (const baseUrl of [
 
     // report.html is opened from the filesystem
     await report.goto(pathToFileURL(reportPath).href);
-    const links = report.locator("a.skypelens-link");
+    const links = report.locator("a.chatlens-link");
 
     // The first click opens the named tab, where the export is loaded once
-    const [skypeLens] = await Promise.all([context.waitForEvent("page"), links.nth(0).click()]);
-    await uploadInput(skypeLens).setInputFiles(exportPath);
-    await expect(linkedMessage(skypeLens, FINDINGS[0].messageId)).toBeVisible();
-    await markTab(skypeLens);
+    const [chatLens] = await Promise.all([context.waitForEvent("page"), links.nth(0).click()]);
+    await uploadInput(chatLens).setInputFiles(exportPath);
+    await expect(linkedMessage(chatLens, FINDINGS[0].messageId)).toBeVisible();
+    await markTab(chatLens);
 
     for (let i = 1; i < FINDINGS.length; i++) {
       if (i === 2) {
-        // Opening a conversation from the sidebar makes SkypeLens write its own URL
-        await skypeLens.locator(`[data-conversation-id="${GROUP_CONVERSATION_ID}"]`).click();
-        expect(beforeHash(skypeLens.url())).toBe(beforeHash(await links.nth(i).getAttribute("href") ?? ""));
+        // Opening a conversation from the sidebar makes ChatLens write its own URL
+        await chatLens.locator(`[data-conversation-id="${GROUP_CONVERSATION_ID}"]`).click();
+        expect(beforeHash(chatLens.url())).toBe(beforeHash(await links.nth(i).getAttribute("href") ?? ""));
       }
 
       await links.nth(i).click();
-      await expect(linkedMessage(skypeLens, FINDINGS[i].messageId)).toBeVisible();
-      await expect(linkedMessage(skypeLens, FINDINGS[i - 1].messageId)).toHaveCount(0);
-      expect(new URL(skypeLens.url()).hash).toContain(`messageId=${FINDINGS[i].messageId}`);
+      await expect(linkedMessage(chatLens, FINDINGS[i].messageId)).toBeVisible();
+      await expect(linkedMessage(chatLens, FINDINGS[i - 1].messageId)).toHaveCount(0);
+      expect(new URL(chatLens.url()).hash).toContain(`messageId=${FINDINGS[i].messageId}`);
 
       // Same tab, same page: no new tab, no reload, no upload screen
       expect(openedPages).toBe(1);
       expect(context.pages()).toHaveLength(2);
-      expect(await readMark(skypeLens)).toBe("not reloaded");
-      await expect(uploadInput(skypeLens)).toHaveCount(0);
+      expect(await readMark(chatLens)).toBe("not reloaded");
+      await expect(uploadInput(chatLens)).toHaveCount(0);
     }
 
     // Clicking the same finding again after scrolling away goes back to it, although the
     // URL doesn't change (no "hashchange")
     const last = FINDINGS.length - 1;
-    const lastMessage = linkedMessage(skypeLens, FINDINGS[last].messageId);
+    const lastMessage = linkedMessage(chatLens, FINDINGS[last].messageId);
     await expect(lastMessage).toBeInViewport();
-    await skypeLens
+    await chatLens
       .locator("[data-message-scroll-container]")
       .evaluate((element) => element.scrollTo(0, element.scrollHeight));
     await expect(lastMessage).not.toBeInViewport();
@@ -80,6 +80,6 @@ for (const baseUrl of [
     await links.nth(last).click();
     await expect(lastMessage).toBeInViewport();
     expect(openedPages).toBe(1);
-    expect(await readMark(skypeLens)).toBe("not reloaded");
+    expect(await readMark(chatLens)).toBe("not reloaded");
   });
 }

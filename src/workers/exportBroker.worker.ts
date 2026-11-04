@@ -1,4 +1,4 @@
-// SharedWorker that connects SkypeLens tabs privately (see utils/exportBroker.ts).
+// SharedWorker that connects ChatLens tabs privately (see utils/exportBroker.ts).
 // It only passes requests and MessagePorts along; export data never goes through it.
 import { createBrokerHub } from "../utils/exportBroker";
 

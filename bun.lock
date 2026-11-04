@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "skype-json-viewer",
+      "name": "chatlens",
       "dependencies": {
         "@mantine/core": "^7.17.8",
         "@mantine/dropzone": "^7.17.8",

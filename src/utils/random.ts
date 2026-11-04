@@ -1,5 +1,5 @@
 // crypto.getRandomValues, unlike crypto.randomUUID, also works outside secure contexts,
-// e.g. SkypeLens opened at http://<LAN address>:5173
+// e.g. ChatLens opened at http://<LAN address>:5173
 
 /** A random 128-bit identifier, as hex. */
 export function randomId(): string {

@@ -232,12 +232,12 @@ export function MessageView() {
       return null;
     }
     if (targetResolution?.status === "merged") {
-      return "The linked message is part of a translation pair. SkypeLens shows the pair as one message, which is highlighted.";
+      return "The linked message is part of a translation pair. ChatLens shows the pair as one message, which is highlighted.";
     }
     if (targetResolution?.status === "hidden") {
       return targetResolution.displayId
-        ? `The linked message (type "${targetResolution.messageType}") is not displayed by SkypeLens. The nearest displayed message is highlighted with a dashed outline instead.`
-        : `The linked message (type "${targetResolution.messageType}") is not displayed by SkypeLens.`;
+        ? `The linked message (type "${targetResolution.messageType}") is not displayed by ChatLens. The nearest displayed message is highlighted with a dashed outline instead.`
+        : `The linked message (type "${targetResolution.messageType}") is not displayed by ChatLens.`;
     }
     return null;
   }, [activeTarget, targetResolution, dismissedNoticeRequestId]);

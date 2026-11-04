@@ -15,7 +15,7 @@ export interface SpecialMessages {
   /** Other participant's Translation (displayed) and its hidden original. */
   otherTranslationId: string;
   otherTranslationOriginalId: string;
-  /** A RichText/Media_Album placeholder, which SkypeLens never displays. */
+  /** A RichText/Media_Album placeholder, which ChatLens never displays. */
   albumId: string;
 }
 

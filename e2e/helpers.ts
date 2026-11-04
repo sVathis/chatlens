@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 import type { DeepLinkTarget } from "../src/utils/deepLink";
 
-// Built like tools/skypelens_links.py does (base URL kept byte for byte, IDs in the
-// hash), independently of SkypeLens' own buildDeepLinkUrl
+// Built like tools/chatlens_links.py does (base URL kept byte for byte, IDs in the
+// hash), independently of ChatLens' own buildDeepLinkUrl
 export const pythonStyleUrl = (baseUrl: string, { conversationId, messageId }: DeepLinkTarget) =>
   `${baseUrl}#conversationId=${encodeURIComponent(conversationId)}&messageId=${encodeURIComponent(messageId ?? "")}`;
 
@@ -12,9 +12,9 @@ export const pythonStyleUrl = (baseUrl: string, { conversationId, messageId }: D
  * e.g. "_blank" for a link that opens a new tab each time, like report.md links.
  */
 export function reportHtml(baseUrl: string, links: { target: DeepLinkTarget; tab?: string }[]) {
-  const items = links.map(({ target, tab = "skypelens" }) => {
+  const items = links.map(({ target, tab = "chatlens" }) => {
     const href = pythonStyleUrl(baseUrl, target).replaceAll("&", "&amp;");
-    return `<li><a class="skypelens-link" href="${href}" target="${tab}">View in SkypeLens</a></li>`;
+    return `<li><a class="chatlens-link" href="${href}" target="${tab}">View in ChatLens</a></li>`;
   });
   return `<!doctype html><meta charset="utf-8"><title>Synthetic report</title><ul>${items.join("")}</ul>`;
 }

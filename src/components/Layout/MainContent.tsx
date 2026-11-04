@@ -48,16 +48,16 @@ export function MainContent() {
 		const notice = exportCopy ? (
 			<ExportCopyNotice state={exportCopy} />
 		) : forwardedTarget ? (
-			<Alert icon={<IconExternalLink size={16} />} color="teal" title="Opened in your other SkypeLens tab">
+			<Alert icon={<IconExternalLink size={16} />} color="teal" title="Opened in your other ChatLens tab">
 				<Text size="sm">
-					Another SkypeLens tab already has this export loaded and is now showing the linked message. Switch to that tab, or load the export below to view it here.
+					Another ChatLens tab already has this export loaded and is now showing the linked message. Switch to that tab, or load the export below to view it here.
 				</Text>
 			</Alert>
 		) : requestedDeepLink ? (
 			<Alert icon={<IconLink size={16} />} color="blue" title="Load the export to open this link">
 				<Stack gap={4}>
 					<Text size="sm">
-						This link points to {requestedDeepLink.messageId ? "a message in " : ""}conversation <Code>{requestedDeepLink.conversationId}</Code>. Load the Skype export that contains it and SkypeLens will jump straight there. Nothing is kept between visits, so the export has to be loaded in each new tab.
+						This link points to {requestedDeepLink.messageId ? "a message in " : ""}conversation <Code>{requestedDeepLink.conversationId}</Code>. Load the Skype export that contains it and ChatLens will jump straight there. Nothing is kept between visits, so the export has to be loaded in each new tab.
 					</Text>
 				</Stack>
 			</Alert>
