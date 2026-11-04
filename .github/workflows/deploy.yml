@@ -20,12 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
+      # The same Bun version as ci.yml: bun.lock is written by Bun, and `--frozen-lockfile`
+      # can fail when a newer Bun writes it differently. "latest" could break the deploy
+      # without any change here; raise this together with ci.yml, deliberately.
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.4.4"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -36,10 +39,12 @@ jobs:
         run: bun run build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
+      # Since v4 this leaves dotfiles out of the artifact; dist/ has none (public/ only holds
+      # favicon.svg). Add `include-hidden-files: true` if one is ever needed there.
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: './dist'
 
@@ -52,5 +57,5 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
