@@ -9,7 +9,6 @@ import {
   getMediaType,
 } from "./mediaUtils";
 import { getMessagePreview, processMessages } from "./messageProcessor";
-import { newestMessageIndex } from "./newest";
 import type { Message } from "./types";
 
 // The conversation lists in a ChatExport from this adapter are Skype's own messages
@@ -27,12 +26,10 @@ export const skypeSource: SourceAdapter = {
     processMessages(asSkype(messages), ownerId, swapped, mediaFiles, limit),
 
   preview: (messages, ownerId) => {
-    const list = asSkype(messages);
-    const index = newestMessageIndex(list);
-    if (index === -1) return "";
-    // The message next to the newest one, which a translation pair looks at
-    const neighbour = index === 0 ? list[1] : list[index - 1];
-    return getMessagePreview(list[index], ownerId, neighbour);
+    // Newest first (see toChatExport). The second message is the neighbour a
+    // translation pair looks at.
+    const [newest, neighbour] = asSkype(messages);
+    return newest ? getMessagePreview(newest, ownerId, neighbour) : "";
   },
 
   typeOf: (message) => (message as Message).messagetype,

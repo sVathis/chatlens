@@ -1,5 +1,5 @@
 import { useState, useEffect, startTransition } from "react";
-import { getSource } from "../sources";
+import { getSource, processForDisplay } from "../sources";
 import type { ChatConversation, ChatExport } from "../model/chat";
 import type { ProcessedMessage } from "../types/messages";
 import { INITIAL_MESSAGE_COUNT } from "../constants/messages";
@@ -85,12 +85,16 @@ export function useMessageProcessing({
     }
 
     const timeoutId = setTimeout(() => {
-      const processed = getSource(exportData.source).process(conversation.messages, {
-        ownerId: exportData.ownerId,
-        swapped,
-        mediaFiles: exportData.mediaFiles,
-        limit: messagesToLoad,
-      });
+      const processed = processForDisplay(
+        getSource(exportData.source),
+        conversation.messages,
+        {
+          ownerId: exportData.ownerId,
+          swapped,
+          mediaFiles: exportData.mediaFiles,
+          limit: messagesToLoad,
+        },
+      );
       cacheProcessedMessages(conversation.id, processed, swapped);
       startTransition(() =>
         setProcessedState({ key, messages: processed, rawCount: messagesToLoad }),

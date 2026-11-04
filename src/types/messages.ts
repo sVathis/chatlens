@@ -3,6 +3,7 @@ export interface ProcessedMessage {
   id: string;
   displayName: string | null;
   timestamp: string;
+  /** HTML, sanitized by processForDisplay before it reaches any renderer. */
   content: string;
   type: "text" | "system" | "call" | "notice" | "media";
   from: string;

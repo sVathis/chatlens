@@ -23,7 +23,11 @@ export interface ChatConversation {
   title: string;
   /** ISO time of the newest message, or "" when there are no messages. */
   lastActivity: string;
-  /** Newest message first. */
+  /**
+   * Newest message first, which the viewer relies on: it shows the start of the list at
+   * the bottom and loads older messages as you scroll up. An adapter puts them in this
+   * order when it builds the conversation, whatever order its export lists them in.
+   */
   messages: SourceMessage[];
 }
 

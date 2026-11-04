@@ -2,7 +2,7 @@ import type { ChatExport } from "../../model/chat";
 import { debugLog } from "../../utils/debug";
 import { readJsonFile } from "../../utils/fileParser";
 import { MEDIA_PATH_PREFIX } from "../../constants/fileUpload";
-import { newestMessageIndex } from "./newest";
+import { newestFirst } from "./order";
 import type { Conversation, SkypeExport } from "./types";
 
 /**
@@ -25,14 +25,31 @@ function inferUserId(conversations: Conversation[]): string {
   );
 }
 
-/** Whether parsed JSON has the shape of a Skype export or a single conversation. */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * A Skype conversation: an ID and a `MessageList`. A top-level `conversations` array on
+ * its own proves nothing, since other chat exports use that name too.
+ */
+function looksLikeConversation(value: unknown): boolean {
+  return isRecord(value) && typeof value.id === "string" && Array.isArray(value.MessageList);
+}
+
+/**
+ * Whether parsed JSON has the shape of a Skype export or a single extracted conversation.
+ * An export needs at least one conversation that looks like Skype's; one with none is
+ * recognised by its `userId`.
+ */
 export function isSkypeJson(parsed: unknown): boolean {
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
-  const data = parsed as Partial<SkypeExport> & Partial<Conversation>;
-  return (
-    Array.isArray(data.conversations) ||
-    (typeof data.id === "string" && Array.isArray(data.MessageList))
-  );
+  if (!isRecord(parsed)) return false;
+  if (looksLikeConversation(parsed)) return true;
+
+  const { conversations } = parsed;
+  if (!Array.isArray(conversations)) return false;
+  return conversations.length > 0
+    ? conversations.some(looksLikeConversation)
+    : typeof parsed.userId === "string";
 }
 
 /**
@@ -42,8 +59,13 @@ export function isSkypeJson(parsed: unknown): boolean {
  * links work the same for all of them.
  */
 export function normalizeSkypeExport(parsed: unknown): SkypeExport {
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+  if (!isRecord(parsed)) {
     throw new Error("Invalid Skype export file format");
+  }
+  if (!isSkypeJson(parsed)) {
+    throw new Error(
+      "Invalid Skype export file format: expected a Skype export or a single conversation with id and MessageList",
+    );
   }
   const data = parsed as Partial<SkypeExport> & Partial<Conversation>;
 
@@ -78,19 +100,21 @@ export function normalizeSkypeExport(parsed: unknown): SkypeExport {
   );
 }
 
-/** Puts a Skype export into the shared model. The message lists are used as they are. */
+/**
+ * Puts a Skype export into the shared model. A message list that is already newest first
+ * (as Skype writes it) is used as it is, not copied.
+ */
 export function toChatExport(data: SkypeExport): ChatExport {
   return {
     source: "skype",
     ownerId: data.userId,
     exportedAt: data.exportDate,
     conversations: data.conversations.map((conversation) => {
-      const messages = conversation.MessageList ?? [];
-      const newest = messages[newestMessageIndex(messages)];
+      const messages = newestFirst(conversation.MessageList ?? []);
       return {
         id: conversation.id,
         title: conversation.displayName,
-        lastActivity: newest?.originalarrivaltime ?? "",
+        lastActivity: messages[0]?.originalarrivaltime ?? "",
         messages,
       };
     }),

@@ -1,3 +1,5 @@
+import { MESSAGE_HTML_CONFIG } from "../../utils/sanitizeHtml";
+
 /**
  * Regex patterns to convert Skype-specific markup to standard HTML.
  * Applied in order: emoji tags, links, formatting, then removal of unwanted elements.
@@ -16,10 +18,8 @@ export const CONTENT_PATTERNS = [
   [/<attribution[^>]*>.*?<\/attribution>/g, ""], // Remove attribution tags
 ] as const;
 
-export const PURIFY_CONFIG = {
-  ALLOWED_TAGS: ["strong", "a", "br", "sup", "em"],
-  ALLOWED_ATTR: ["href", "target", "rel"],
-};
+// The same allowlist the viewer applies to every source's messages before showing them
+export const PURIFY_CONFIG = MESSAGE_HTML_CONFIG;
 
 export const THREAD_ACTIVITY_PATTERNS = {
   AddMember: /<target>([^<]+)<\/target>/g,

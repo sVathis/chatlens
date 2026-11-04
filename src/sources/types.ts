@@ -34,7 +34,15 @@ export interface SourceAdapter {
   canLoadJson(parsed: unknown): boolean;
   fromJson(parsed: unknown): ChatExport;
 
-  /** The displayed form of the first `limit` messages (all when omitted). */
+  /**
+   * The displayed form of the first `limit` messages (all when omitted).
+   *
+   * `ProcessedMessage.content` is HTML. Call this through `processForDisplay`
+   * (src/sources/index.ts), which sanitizes it with an allowlist before anything renders
+   * it, so an adapter can't make the viewer run code by mistake. An adapter should still
+   * escape any plain text it puts into the HTML (a name, a file name, a message), because
+   * the sanitizer only removes what is unsafe, it doesn't turn text into text.
+   */
   process(messages: SourceMessage[], options: ProcessOptions): ProcessedMessage[];
   /** One line about a conversation's newest message, for the conversation list. */
   preview(messages: SourceMessage[], ownerId: string): string;

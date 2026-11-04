@@ -1,13 +1,27 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { getSource, loadExportFolder, loadExportJson } from "../sources";
+import {
+  getSource,
+  loadExportFolder,
+  loadExportJson,
+  pickFolderSource,
+  pickJsonSource,
+  processForDisplay,
+} from "../sources";
+import type { SourceId } from "../model/chat";
+import type { SourceAdapter } from "../sources/types";
 import { skypeSource } from "../sources/skype";
-import { toChatExport } from "../sources/skype/load";
+import { isSkypeJson, normalizeSkypeExport, toChatExport } from "../sources/skype/load";
+import type { Message } from "../sources/skype/types";
+import { PURIFY_CONFIG } from "../sources/skype/constants";
 import { processMessages } from "../sources/skype/messageProcessor";
 import { useMessageStore } from "../store/messageStore";
+import { MESSAGE_HTML_CONFIG, sanitizeMessageHtml, sanitizeProcessedMessage } from "../utils/sanitizeHtml";
+import { buildVirtualRows } from "../utils/virtualRows";
 import {
   OWNER_ID,
   createSyntheticConversation,
   createSyntheticExport,
+  messageIdFor,
 } from "./fixtures/syntheticExport";
 
 /** A Skype message with only what these tests look at. */
@@ -59,20 +73,71 @@ describe("the shared model", () => {
   });
 });
 
-describe("the newest message of a conversation", () => {
+describe("the order of a conversation's messages", () => {
   const older = message("1", "2024-01-01T10:00:00.000Z", "older");
   const newer = message("2", "2024-03-01T10:00:00.000Z", "newer");
 
-  it("is the first one when the list is newest first", () => {
-    const [chat] = skypeSource.fromJson(conversation("c", [newer, older])).conversations;
+  it("keeps a list that is newest first as it is, without copying it", () => {
+    const list = [newer, older];
+    const [chat] = skypeSource.fromJson(conversation("c", list)).conversations;
+    expect(chat.messages).toBe(list);
     expect(chat.lastActivity).toBe(newer.originalarrivaltime);
     expect(skypeSource.preview(chat.messages, OWNER_ID)).toBe("newer");
   });
 
-  it("is the last one when the list is oldest first", () => {
-    const [chat] = skypeSource.fromJson(conversation("c", [older, newer])).conversations;
+  it("puts a list that is oldest first into newest-first order, leaving the original alone", () => {
+    const list = [older, newer];
+    const [chat] = skypeSource.fromJson(conversation("c", list)).conversations;
+    expect(chat.messages.map((m) => m.id)).toEqual(["2", "1"]);
+    expect(list.map((m) => m.id)).toEqual(["1", "2"]);
     expect(chat.lastActivity).toBe(newer.originalarrivaltime);
     expect(skypeSource.preview(chat.messages, OWNER_ID)).toBe("newer");
+  });
+
+  it("shows the viewer the same messages whichever way round the export lists them", () => {
+    // Includes translation pairs and an album, which look at their neighbours
+    const { conversation: synthetic } = createSyntheticConversation(120);
+    const [fromNewest] = skypeSource.fromJson(synthetic).conversations;
+    const [fromOldest] = skypeSource.fromJson({
+      ...synthetic,
+      MessageList: [...synthetic.MessageList].reverse(),
+    }).conversations;
+
+    expect(fromOldest.messages.map((m) => m.id)).toEqual(fromNewest.messages.map((m) => m.id));
+    for (const swapped of [false, true]) {
+      const options = { ownerId: OWNER_ID, swapped, limit: 120 };
+      expect(skypeSource.process(fromOldest.messages, options)).toEqual(
+        skypeSource.process(fromNewest.messages, options),
+      );
+    }
+  });
+
+  it.each([
+    ["newest first", (list: Message[]) => list],
+    ["oldest first", (list: Message[]) => [...list].reverse()],
+  ])("starts at the newest messages and loads older ones when scrolling up (%s)", (_label, arrange) => {
+    const { conversation: synthetic } = createSyntheticConversation(300);
+    const [chat] = skypeSource.fromJson({
+      ...synthetic,
+      MessageList: arrange(synthetic.MessageList),
+    }).conversations;
+    const show = (limit: number) =>
+      processForDisplay(skypeSource, chat.messages, { ownerId: OWNER_ID, swapped: false, limit });
+
+    const first = show(50);
+    const more = show(100);
+    const firstIds = new Set(first.map((m) => m.id));
+
+    // The newest message is the last row on screen
+    const newestId = messageIdFor(299);
+    const { rowIndexByMessageId } = buildVirtualRows(first);
+    expect(Math.max(...rowIndexByMessageId.values())).toBe(rowIndexByMessageId.get(newestId));
+
+    // Loading more adds only older messages
+    const oldestShown = Math.min(...first.map((m) => Date.parse(m.timestamp)));
+    const added = more.filter((m) => !firstIds.has(m.id));
+    expect(added.length).toBeGreaterThan(0);
+    expect(Math.max(...added.map((m) => Date.parse(m.timestamp)))).toBeLessThan(oldestShown);
   });
 
   it("handles a single message and an empty conversation", () => {
@@ -87,17 +152,20 @@ describe("the newest message of a conversation", () => {
     expect(skypeSource.preview(empty.messages, OWNER_ID)).toBe("");
   });
 
-  it("orders the conversation list by it", () => {
+  it.each([
+    ["newest first", (list: ReturnType<typeof message>[]) => list],
+    ["oldest first", (list: ReturnType<typeof message>[]) => [...list].reverse()],
+  ])("orders the conversation list by newest activity (messages listed %s)", (_label, arrange) => {
     // X started later than Y but was active earlier: the old code, which looked at the
     // last message of each list (the oldest), put X first
-    const x = conversation("x", [
+    const x = conversation("x", arrange([
       message("x2", "2024-06-01T10:00:00.000Z", "x newest"),
       message("x1", "2024-05-01T10:00:00.000Z", "x oldest"),
-    ]);
-    const y = conversation("y", [
+    ]));
+    const y = conversation("y", arrange([
       message("y2", "2024-07-01T10:00:00.000Z", "y newest"),
       message("y1", "2023-01-01T10:00:00.000Z", "y oldest"),
-    ]);
+    ]));
     store().unloadExport();
     store().setExportData(
       skypeSource.fromJson({ userId: OWNER_ID, exportDate: "", conversations: [x, y] }),
@@ -177,5 +245,146 @@ describe("loading an upload", () => {
 
     const notAnExport = new File(['{"hello": "world"}'], "other.json");
     await expect(loadExportJson(notAnExport, () => {})).rejects.toThrow(/Invalid Skype export/);
+  });
+});
+
+describe("the HTML boundary", () => {
+  const unsafe =
+    '<img src=x onerror="alert(1)">hello <script>alert(2)</script>' +
+    '<a href="javascript:alert(3)">link</a><strong style="color:red">bold</strong>';
+  const nothingUnsafe = /<img|<script|onerror|javascript:|style=/i;
+  const shownMessage = (content: string) => ({
+    id: "1",
+    displayName: null,
+    timestamp: "2024-01-01T00:00:00.000Z",
+    content,
+    type: "text" as const,
+    from: "someone",
+    isOwner: false,
+    originalMessageType: "Test",
+  });
+
+  it("keeps formatting and links, and removes everything that can run code", () => {
+    const safe =
+      '<strong>a</strong> <em>b</em><br><sup>c</sup> <a href="https://example.com/x" target="_blank" rel="noopener noreferrer">d</a>';
+    expect(sanitizeMessageHtml(safe)).toBe(safe);
+
+    const cleaned = sanitizeMessageHtml(unsafe);
+    expect(cleaned).not.toMatch(nothingUnsafe);
+    expect(cleaned).toContain("hello");
+    expect(cleaned).toContain("link");
+    expect(cleaned).toContain("<strong>bold</strong>");
+  });
+
+  it("is the allowlist the Skype processor uses", () => {
+    expect(PURIFY_CONFIG).toBe(MESSAGE_HTML_CONFIG);
+  });
+
+  it("returns a message that is already safe as it is", () => {
+    const safe = shownMessage("<em>fine</em>");
+    expect(sanitizeProcessedMessage(safe)).toBe(safe);
+    expect(sanitizeProcessedMessage(shownMessage(unsafe)).content).not.toMatch(nothingUnsafe);
+  });
+
+  it("sanitizes whatever any adapter returns, before anything renders it", () => {
+    // An adapter that forgets to sanitize, as a future one might
+    const careless: SourceAdapter = { ...skypeSource, process: () => [shownMessage(unsafe)] };
+    const [shown] = processForDisplay(careless, [], { ownerId: OWNER_ID, swapped: false });
+    expect(shown.content).not.toMatch(nothingUnsafe);
+    expect(shown.content).toContain("hello");
+  });
+
+  it("also covers the Skype text that was not sanitized before", () => {
+    // A file name goes into the message as it is, and so does a plain Text message
+    const risky = [
+      {
+        ...message(
+          "file",
+          "2024-01-01T10:00:00.000Z",
+          '<URIObject type="File.1"><OriginalName v="<img src=x onerror=alert(1)>.pdf"></OriginalName></URIObject>',
+        ),
+        messagetype: "RichText/Media_GenericFile",
+      },
+      {
+        ...message("text", "2024-01-01T10:00:01.000Z", "<img src=x onerror=alert(2)>plain"),
+        messagetype: "Text",
+      },
+    ];
+    const shown = processForDisplay(skypeSource, risky, { ownerId: OWNER_ID, swapped: false });
+
+    expect(shown).toHaveLength(2);
+    for (const { content } of shown) expect(content).not.toMatch(nothingUnsafe);
+  });
+
+  it("changes nothing in what Skype shows for ordinary messages", () => {
+    const { conversation: synthetic } = createSyntheticConversation(300);
+    for (const swapped of [false, true]) {
+      const options = { ownerId: OWNER_ID, swapped, limit: 300 };
+      expect(processForDisplay(skypeSource, synthetic.MessageList, options)).toEqual(
+        skypeSource.process(synthetic.MessageList, options),
+      );
+    }
+  });
+});
+
+describe("recognising a Skype export", () => {
+  it("accepts the shapes Skype writes", () => {
+    const { exportData, conversation: synthetic } = createSyntheticExport(5);
+    expect(isSkypeJson(JSON.parse(JSON.stringify(exportData)))).toBe(true);
+    expect(isSkypeJson(JSON.parse(JSON.stringify(synthetic)))).toBe(true); // one conversation
+    // No conversations yet, but it names its owner
+    expect(isSkypeJson({ userId: OWNER_ID, conversations: [] })).toBe(true);
+    // Not every conversation needs messages listed
+    expect(isSkypeJson({ conversations: [{ id: "a" }, { id: "b", MessageList: [] }] })).toBe(true);
+  });
+
+  it("does not claim other JSON that shares generic field names", () => {
+    const lookalikes = [
+      { conversations: [{ id: "c1", messages: [] }], ownerId: "me" },
+      { conversations: [] },
+      { conversations: [1, "x", null] },
+      { conversations: {} },
+      { chats: [{ id: 1, messages: [] }] },
+      { id: "c1", messages: [] },
+      [],
+      null,
+      "text",
+    ];
+    for (const json of lookalikes) {
+      expect(isSkypeJson(json), JSON.stringify(json)).toBe(false);
+      expect(() => normalizeSkypeExport(json), JSON.stringify(json)).toThrow(/Invalid Skype export/);
+    }
+  });
+});
+
+describe("choosing the source for an upload", () => {
+  // A made-up app whose JSON also has a top-level `conversations` array of { id, messages }
+  const otherExport = { format: "other-chat", conversations: [{ id: "c1", messages: [] }] };
+  const claimsOtherExport = (parsed: unknown) =>
+    (parsed as { format?: unknown } | null)?.format === "other-chat";
+  const other: SourceAdapter = {
+    ...skypeSource,
+    id: "other" as SourceId,
+    canLoadJson: claimsOtherExport,
+    canLoadFolder: (files) => files.some((file) => file.name === "other.json"),
+  };
+
+  it.each([
+    ["Skype first", [skypeSource, other]],
+    ["Skype last", [other, skypeSource]],
+  ])("gives each export to its own source whatever the order (%s)", (_label, sources) => {
+    const skypeJson = JSON.parse(JSON.stringify(createSyntheticExport(5).exportData));
+    expect(pickJsonSource(sources, otherExport)?.id).toBe("other");
+    expect(pickJsonSource(sources, skypeJson)?.id).toBe("skype");
+    expect(pickJsonSource(sources, { unrelated: true })).toBeUndefined();
+  });
+
+  it("picks a folder by what it contains", () => {
+    const folder = (name: string) => [
+      Object.defineProperty(new File(["{}"], name), "webkitRelativePath", { value: `export/${name}` }),
+    ];
+    expect(pickFolderSource([skypeSource, other], folder("other.json"))?.id).toBe("other");
+    expect(pickFolderSource([skypeSource, other], folder("messages.json"))?.id).toBe("skype");
+    expect(pickFolderSource([skypeSource, other], folder("notes.txt"))).toBeUndefined();
   });
 });
