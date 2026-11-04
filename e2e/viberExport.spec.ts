@@ -1,11 +1,16 @@
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { CHATLENS_E2E_BASE_URL } from "../playwright.config";
 import type { ViberExport } from "../src/sources/viber/types";
-import sample from "../src/__tests__/fixtures/viberSample.json";
 import { linkedMessage, reportHtml, uploadInput } from "./helpers";
+
+// Read from disk: Node needs an import attribute for a JSON import, which Vite (the unit
+// tests) does not
+const SAMPLE_PATH = join(process.cwd(), "src/__tests__/fixtures/viberSample.json");
+const sample = JSON.parse(readFileSync(SAMPLE_PATH, "utf8")) as ViberExport;
 
 // A synthetic Viber export folder: the exporter's sample JSON, with media files for the
 // messages that name them. No real conversation content anywhere.
@@ -46,7 +51,7 @@ const STICKER = "media/stickers/00040103.png";
 
 /** Writes the export folder: viber_export.json and the media it names. */
 async function writeViberFolder(testInfo: TestInfo): Promise<string> {
-  const data = structuredClone(sample) as unknown as ViberExport;
+  const data = structuredClone(sample);
   const messages = data.chats[0].messages;
   const byId = (id: number) => messages.find((m) => m.id === id)!;
   byId(104).media!.path = PHOTO;
