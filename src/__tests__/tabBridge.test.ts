@@ -8,7 +8,9 @@ import {
 } from "../utils/tabBridge";
 import type { DeepLinkTarget } from "../utils/deepLink";
 import type { ExportBroker } from "../utils/exportBroker";
-import type { Conversation, SkypeExport } from "../types/messages";
+import type { ChatExport } from "../model/chat";
+import { toChatExport } from "../sources/skype/load";
+import type { Conversation } from "../sources/skype/types";
 import { canShowDeepLink } from "../utils/messageLocator";
 import {
   CONVERSATION_ID,
@@ -60,7 +62,11 @@ describe("tab bridge", () => {
       const onNavigate = vi.fn();
       createTabBridge({
         channel: bus.open(),
-        canHandle: (t) => canShowDeepLink(conversations, t),
+        canHandle: (t) =>
+          canShowDeepLink(
+            toChatExport({ userId: "8:live:owner", exportDate: "", conversations }).conversations,
+            t,
+          ),
         onNavigate,
         onForwarded: vi.fn(),
       });
@@ -137,15 +143,15 @@ const IDLE = { offers: 0, claims: 0, transfers: 0, approvals: 0, ports: 0 };
 // Claims for offers that led to a copy expire on their own (OFFER_TTL_MS)
 const NO_COPY = { transfers: 0, approvals: 0, ports: 0 };
 
-function exportWith(conversationId: string): SkypeExport {
-  return {
+function exportWith(conversationId: string): ChatExport {
+  return toChatExport({
     userId: "8:live:owner",
     exportDate: "2024-12-31T00:00:00.000Z",
     conversations: [createSyntheticConversation(20, conversationId).conversation],
     mediaFiles: new Map([
       ["0-abc.1.jpg", new File(["synthetic"], "0-abc.1.jpg", { type: "image/jpeg" })],
     ]),
-  };
+  });
 }
 
 const linkTo = (conversationId: string, n = 5): DeepLinkTarget => ({
@@ -171,7 +177,7 @@ function transferTab(
   bus: ReturnType<typeof createBus>,
   network: ReturnType<typeof createBrokerNetwork>,
   options: {
-    exportData?: SkypeExport | null;
+    exportData?: ChatExport | null;
     wantsExport?: boolean;
     approve?: Approve;
     approvalTimeoutMs?: number;
@@ -187,7 +193,7 @@ function transferTab(
     onForwarded: vi.fn(),
     getExport: vi.fn(() => exportData),
     approve: vi.fn<Approve>(options.approve ?? (async () => true)),
-    onExportReceived: vi.fn<(data: SkypeExport) => void>(),
+    onExportReceived: vi.fn<(data: ChatExport) => void>(),
   };
   const bridge: TabBridge = createTabBridge({
     channel: bus.open(),
@@ -212,7 +218,7 @@ function transferTab(
     bridge,
     broker,
     states,
-    setExport: (data: SkypeExport | null) => (exportData = data),
+    setExport: (data: ChatExport | null) => (exportData = data),
     ...handlers,
   };
 }
@@ -585,7 +591,7 @@ describe("copying the export to the report's tab", () => {
       const bus = createBus();
       const network = createBrokerNetwork();
       const uncloneable = { ...exportWith(CONVERSATION_A), cannotClone: () => undefined };
-      transferTab(bus, network, { exportData: uncloneable as SkypeExport });
+      transferTab(bus, network, { exportData: uncloneable as ChatExport });
       const reportTab = transferTab(bus, network, { wantsExport: true });
 
       reportTab.bridge.offer(linkTo(CONVERSATION_A));
@@ -649,7 +655,7 @@ describe("copying the export to the report's tab", () => {
 
       for (let n = 1; n <= 5; n++) {
         // The last round fails: the export can't be cloned
-        if (n === 5) holder.setExport({ ...exportWith(CONVERSATION_A), cannotClone: () => undefined } as SkypeExport);
+        if (n === 5) holder.setExport({ ...exportWith(CONVERSATION_A), cannotClone: () => undefined } as ChatExport);
         reportTab.bridge.offer(linkTo(CONVERSATION_A, n));
         await flush();
         expect(network.transferPorts).toHaveLength(n);

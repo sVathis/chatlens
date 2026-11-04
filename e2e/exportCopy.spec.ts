@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { CHATLENS_E2E_BASE_URL } from "../playwright.config";
 import type { DeepLinkTarget } from "../src/utils/deepLink";
-import type { SkypeExport } from "../src/types/messages";
+import type { SkypeExport } from "../src/sources/skype/types";
 import {
   CONVERSATION_ID,
   OTHER_ID,

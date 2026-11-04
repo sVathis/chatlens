@@ -21,11 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useMessageStore } from "../../store/messageStore";
-import {
-  createMediaUrl,
-  createVideoThumbnailUrl,
-  getMediaType,
-} from "../../utils/mediaUtils";
+import { useSource } from "../../hooks/useSource";
 import type { MediaMetadata, MediaItem } from "../../types/messages";
 import { revokeObjectUrl } from "../../utils/urlManager";
 import { THUMBNAIL_SIZE } from "../../constants/media";
@@ -44,6 +40,7 @@ function MediaThumbnail({
   onClick,
 }: MediaThumbnailProps) {
   const { exportData } = useMessageStore();
+  const { media } = useSource();
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
   const thumbnailLoadedRef = useRef(false);
@@ -57,14 +54,14 @@ function MediaThumbnail({
 
     async function loadThumbnail() {
       try {
-        const type = await getMediaType(mediaId, mediaFiles);
+        const type = await media.getType(mediaId, mediaFiles);
         setMediaType(type);
 
         let url: string | null = null;
 
         if (type === "video") {
           try {
-            url = await createVideoThumbnailUrl(mediaId, mediaFiles);
+            url = await media.createThumbnailUrl(mediaId, mediaFiles);
           } catch (error) {
             console.error("[MediaViewer] Failed to load video thumbnail:", {
               error,
@@ -75,7 +72,7 @@ function MediaThumbnail({
 
         if (!url) {
           try {
-            url = await createMediaUrl(mediaId, mediaFiles);
+            url = await media.createUrl(mediaId, mediaFiles);
           } catch (error) {
             console.error(
               "[MediaViewer] Failed to load media URL for thumbnail:",
@@ -108,7 +105,7 @@ function MediaThumbnail({
         urlRef.current = null;
       }
     };
-  }, [mediaId, exportData?.mediaFiles]);
+  }, [mediaId, exportData?.mediaFiles, media]);
 
   return (
     <Box
@@ -213,6 +210,7 @@ export function MediaViewer({
   isLoadingGallery = false,
 }: MediaViewerProps) {
   const { exportData } = useMessageStore();
+  const { media } = useSource();
   const [mediaUrl, setMediaUrl] = useState<string | null>(
     initialMediaUrl || null,
   );
@@ -295,24 +293,11 @@ export function MediaViewer({
             createdUrlRef.current = null;
           }
         } else {
-          const metadataFile = exportData.mediaFiles.get(`${mediaId}.json`);
-
-          if (metadataFile) {
-            try {
-              const text = await metadataFile.text();
-              const meta: MediaMetadata = JSON.parse(text);
-              setMetadata(meta);
-            } catch (error) {
-              console.error("[MediaViewer] Failed to parse metadata:", {
-                error,
-                mediaId,
-                fileName: metadataFile.name,
-              });
-            }
-          }
+          const meta = await media.getMetadata(mediaId, exportData.mediaFiles);
+          if (meta) setMetadata(meta);
 
           try {
-            const url = await createMediaUrl(mediaId, exportData.mediaFiles);
+            const url = await media.createUrl(mediaId, exportData.mediaFiles);
 
             if (url) {
               if (createdUrlRef.current) {
@@ -336,7 +321,7 @@ export function MediaViewer({
         }
 
         try {
-          const type = await getMediaType(mediaId, exportData.mediaFiles);
+          const type = await media.getType(mediaId, exportData.mediaFiles);
           setMediaType(type);
         } catch (error) {
           console.error("[MediaViewer] Failed to get media type:", {
@@ -364,7 +349,7 @@ export function MediaViewer({
         createdUrlRef.current = null;
       }
     };
-  }, [mediaId, opened, exportData, initialMediaUrl, initialMetadata]);
+  }, [mediaId, opened, exportData, media, initialMediaUrl, initialMetadata]);
 
   const handleZoomIn = useCallback(() => {
     setZoom((prev) => Math.min(prev + 0.5, 5));

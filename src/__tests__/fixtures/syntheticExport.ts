@@ -1,4 +1,6 @@
-import type { Conversation, Message, SkypeExport } from "../../types/messages";
+import type { ChatExport } from "../../model/chat";
+import { toChatExport } from "../../sources/skype/load";
+import type { Conversation, Message, SkypeExport } from "../../sources/skype/types";
 
 export const OWNER_ID = "8:live:.cid.synthetic-owner";
 export const OTHER_ID = "8:live:.cid.synthetic-other";
@@ -89,7 +91,10 @@ export function createSyntheticConversation(
 }
 
 export function createSyntheticExport(count = 10_000): {
+  /** As Skype writes it: what a messages.json upload holds. */
   exportData: SkypeExport;
+  /** The same export in the shared model, as the store holds it. */
+  chatExport: ChatExport;
   conversation: Conversation;
   special: SpecialMessages;
 } {
@@ -97,15 +102,12 @@ export function createSyntheticExport(count = 10_000): {
   const { conversation: group } = createSyntheticConversation(120, GROUP_CONVERSATION_ID);
   const empty: Conversation = { ...group, id: "8:live:.cid.synthetic-empty", MessageList: [] };
 
-  return {
-    exportData: {
-      userId: OWNER_ID,
-      exportDate: "2024-12-31T00:00:00.000Z",
-      conversations: [group, conversation, empty],
-    },
-    conversation,
-    special,
+  const exportData: SkypeExport = {
+    userId: OWNER_ID,
+    exportDate: "2024-12-31T00:00:00.000Z",
+    conversations: [group, conversation, empty],
   };
+  return { exportData, chatExport: toChatExport(exportData), conversation, special };
 }
 
 /** Raw index of the chronological message n in a conversation of `count` messages. */

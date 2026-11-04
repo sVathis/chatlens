@@ -1,14 +1,10 @@
 import DOMPurify from "dompurify";
-import type {
-  Message,
-  ProcessedMessage,
-  TranslationContent,
-} from "../types/messages";
+import type { ProcessedMessage } from "../../types/messages";
+import type { Message, TranslationContent } from "./types";
 import { extractMediaId } from "./mediaUtils";
 import { parseSkypeEmoji } from "./skypeEmoji";
 import { cleanDisplayName } from "./displayName";
-import { GROUP_TIME_THRESHOLD } from "../constants/messages";
-import { debugLog } from "./debug";
+import { debugLog } from "../../utils/debug";
 import {
   CONTENT_PATTERNS,
   PURIFY_CONFIG,
@@ -17,7 +13,7 @@ import {
   STRIP_HTML_PATTERN,
   STRIP_SKYPE_PATTERN,
   PREVIEW_MAX_LENGTH,
-} from "../constants/messageProcessor";
+} from "./constants";
 
 interface MessageProcessorContext {
   userId: string;
@@ -682,67 +678,6 @@ function parsePopCard(message: Message): string {
     });
     return "System Message";
   }
-}
-
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-
-/**
- * Groups messages by date for display purposes.
- * Returns a map where keys are formatted dates and values are arrays of messages.
- */
-export function groupMessagesByDate(
-  messages: ProcessedMessage[],
-): Map<string, ProcessedMessage[]> {
-  const grouped = new Map<string, ProcessedMessage[]>();
-
-  for (const message of messages) {
-    const dateKey = DATE_FORMATTER.format(new Date(message.timestamp));
-    const group = grouped.get(dateKey) || [];
-    group.push(message);
-    grouped.set(dateKey, group);
-  }
-
-  return grouped;
-}
-
-/**
- * Determines if a message should be visually grouped with the previous message.
- * 
- * Grouping rules:
- * 1. Must be from same sender
- * 2. Must be same message type (text/media/system)
- * 3. Must be within time threshold (GROUP_TIME_THRESHOLD)
- * 4. System messages are never grouped
- * 
- * Grouped messages share the same bubble styling and only show sender/timestamp on the first message.
- */
-export function shouldGroupWithPrevious(
-  current: ProcessedMessage,
-  previous: ProcessedMessage | null,
-): boolean {
-  // Different sender or type cannot be grouped
-  if (
-    !previous ||
-    current.from !== previous.from ||
-    current.type !== previous.type
-  ) {
-    return false;
-  }
-  // System messages are always displayed separately
-  if (current.type === "system" || previous.type === "system") {
-    return false;
-  }
-
-  // Check if messages are close enough in time to be grouped
-  const timeDiff = Math.abs(
-    new Date(current.timestamp).getTime() -
-      new Date(previous.timestamp).getTime(),
-  );
-  return timeDiff < GROUP_TIME_THRESHOLD;
 }
 
 function stripHtml(html: string): string {

@@ -3,7 +3,7 @@ import { IconAlertCircle, IconExternalLink, IconLink } from "@tabler/icons-react
 import { useCallback } from "react";
 import { FileUpload } from "../Upload/FileUpload";
 import { useMessageStore, useExportData } from "../../store/messageStore";
-import type { SkypeExport } from "../../types/messages";
+import type { ChatExport } from "../../model/chat";
 import { MessageView } from "../Message/MessageView";
 import { useDeepLinkNavigation } from "../../hooks/useDeepLinkNavigation";
 import { ExportApprovalDialog, ExportCopyNotice } from "./ExportTransfer";
@@ -17,7 +17,7 @@ export function MainContent() {
 	const unloadExport = useMessageStore((state) => state.unloadExport);
 	const { forwardedTarget, exportCopy, approvalRequest } = useDeepLinkNavigation();
 
-	const handleFileProcessed = useCallback((data: SkypeExport) => {
+	const handleFileProcessed = useCallback((data: ChatExport) => {
 		setExportData(data);
 	}, [setExportData]);
 

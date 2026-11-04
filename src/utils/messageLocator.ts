@@ -1,12 +1,13 @@
-import type { Conversation, Message, ProcessedMessage } from "../types/messages";
+import type { ChatConversation, SourceMessage } from "../model/chat";
+import type { ProcessedMessage } from "../types/messages";
 import type { DeepLinkTarget } from "./deepLink";
 import { DEEP_LINK_CONTEXT_MESSAGES } from "../constants/deepLink";
 
 /**
- * Finds the position of an original Skype message in `Conversation.MessageList`.
- * Matching is exact on `Message.id`; returns -1 when the message is not in the conversation.
+ * Finds the position of an original message in `ChatConversation.messages`.
+ * Matching is exact on `SourceMessage.id`; returns -1 when the message is not in the conversation.
  */
-export function findRawMessageIndex(messages: Message[], messageId: string): number {
+export function findRawMessageIndex(messages: SourceMessage[], messageId: string): number {
   return messages.findIndex((message) => message.id === messageId);
 }
 
@@ -16,21 +17,21 @@ export function findRawMessageIndex(messages: Message[], messageId: string): num
  * (e.g. an older one) may lack the message.
  */
 export function canShowDeepLink(
-  conversations: Conversation[],
+  conversations: ChatConversation[],
   target: DeepLinkTarget,
 ): boolean {
   const conversation = conversations.find((c) => c.id === target.conversationId);
   if (!conversation) return false;
   return (
     target.messageId === null ||
-    findRawMessageIndex(conversation.MessageList, target.messageId) !== -1
+    findRawMessageIndex(conversation.messages, target.messageId) !== -1
   );
 }
 
 /**
  * Number of raw messages that must be processed so the message at `rawIndex`
  * is included, plus some older messages for context above it.
- * MessageList is processed from index 0, so this is a prefix length.
+ * The list is processed from index 0, so this is a prefix length.
  */
 export function getRequiredMessageCount(
   rawIndex: number,
@@ -77,16 +78,19 @@ export type DisplayedMessageResolution =
 /**
  * Resolves which displayed bubble represents the original message at `rawIndex`.
  *
- * @param rawMessages - `Conversation.MessageList`
+ * @param rawMessages - `ChatConversation.messages`
  * @param rawIndex - index of the requested message in `rawMessages`
  * @param processed - processed messages produced from the first `processedRawCount` raw messages
  * @param processedRawCount - how many raw messages `processed` covers
+ * @param typeOf - names the kind of a raw message (SourceAdapter.typeOf), reported for
+ *   messages that are not displayed
  */
 export function resolveDisplayedMessage(
-  rawMessages: Message[],
+  rawMessages: SourceMessage[],
   rawIndex: number,
   processed: ProcessedMessage[],
   processedRawCount: number,
+  typeOf: (message: SourceMessage) => string,
 ): DisplayedMessageResolution {
   const target = rawMessages[rawIndex];
   if (!target || processedRawCount <= rawIndex) {
@@ -108,10 +112,10 @@ export function resolveDisplayedMessage(
       if (index < 0 || index >= limit) continue;
       const neighbourId = displayedIds.get(rawMessages[index].id);
       if (neighbourId !== undefined) {
-        return { status: "hidden", displayId: neighbourId, messageType: target.messagetype };
+        return { status: "hidden", displayId: neighbourId, messageType: typeOf(target) };
       }
     }
   }
 
-  return { status: "hidden", displayId: null, messageType: target.messagetype };
+  return { status: "hidden", displayId: null, messageType: typeOf(target) };
 }

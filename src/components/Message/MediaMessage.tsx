@@ -1,11 +1,7 @@
 import { Paper, Text, Loader, Center, Box } from "@mantine/core";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMessageStore } from "../../store/messageStore";
-import {
-  createMediaUrl,
-  createVideoThumbnailUrl,
-  getMediaType,
-} from "../../utils/mediaUtils";
+import { useSource } from "../../hooks/useSource";
 import type { MediaMetadata } from "../../types/messages";
 import { MediaViewer } from "./MediaViewer";
 import { useMediaNavigation } from "../../hooks/useMediaGallery";
@@ -26,6 +22,7 @@ interface MediaMessageProps {
 
 export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
   const { exportData } = useMessageStore();
+  const { media } = useSource();
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<MediaMetadata | null>(null);
@@ -91,20 +88,10 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
       }
 
       try {
-        const [metadataFile, type, url] = await Promise.all([
-          exportData.mediaFiles
-            .get(`${mediaId}.json`)
-            ?.text()
-            .catch((error) => {
-              console.error("[MediaMessage] Failed to read metadata file:", {
-                error,
-                mediaId,
-                fileName: `${mediaId}.json`,
-              });
-              return null;
-            }),
-          getMediaType(mediaId, exportData.mediaFiles),
-          createMediaUrl(mediaId, exportData.mediaFiles),
+        const [meta, type, url] = await Promise.all([
+          media.getMetadata(mediaId, exportData.mediaFiles),
+          media.getType(mediaId, exportData.mediaFiles),
+          media.createUrl(mediaId, exportData.mediaFiles),
         ]);
 
         if (cancelled) {
@@ -112,18 +99,7 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
           return;
         }
 
-        if (metadataFile) {
-          try {
-            const meta: MediaMetadata = JSON.parse(metadataFile);
-            if (!cancelled) setMetadata(meta);
-          } catch (error) {
-            console.error("[MediaMessage] Failed to parse metadata:", {
-              error,
-              mediaId,
-              fileName: `${mediaId}.json`,
-            });
-          }
-        }
+        if (meta) setMetadata(meta);
 
         setMediaType(type);
 
@@ -133,7 +109,7 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
 
           if (type === "video") {
             try {
-              const thumb = await createVideoThumbnailUrl(
+              const thumb = await media.createThumbnailUrl(
                 mediaId,
                 exportData.mediaFiles,
               );
@@ -178,7 +154,7 @@ export function MediaMessage({ mediaId, isOwner }: MediaMessageProps) {
       urlRef.current = null;
       thumbUrlRef.current = null;
     };
-  }, [mediaId, exportData]);
+  }, [mediaId, exportData, media]);
 
   const paperBaseStyle = {
     maxWidth: "400px",

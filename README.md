@@ -246,6 +246,19 @@ GitHub Actions runs all of these (lint, `bun run test`, build, the Python tests 
 - **Development**: http://localhost:5173
 - **Production**: Build files in `dist/` directory
 
+## 🧩 How the code is organised
+
+ChatLens works on a source-neutral model, so more chat apps than Skype can be added. Skype is the first.
+
+- [`src/model/chat.ts`](src/model/chat.ts) defines `ChatExport` (a loaded export: its source, owner, conversations and media files) and `ChatConversation` (an ID, a title, the time of its newest message and its messages, newest first). It is plain data, so an export can be copied between tabs.
+- A **source adapter** in `src/sources/<source>/` is the only code that knows an app's own format. It implements `SourceAdapter` ([`src/sources/types.ts`](src/sources/types.ts)): recognise and load an upload, show a conversation's messages, write the one-line preview for the conversation list, and find attachments. Messages stay in the source's own format inside `ChatConversation.messages`.
+- [`src/sources/index.ts`](src/sources/index.ts) lists the adapters and picks the right one for an upload. An adapter must only claim exports that are really its own, since the first one that does wins.
+- An adapter hands over each conversation's messages **newest first**, whatever order its export uses (the Skype adapter reverses a list written the other way round), because the viewer starts at the newest message and loads older ones as you scroll up.
+- The messages an adapter shows are HTML, and **`processForDisplay`** (in `src/sources/index.ts`) is where they are made safe: it sanitizes them with an allowlist (`src/utils/sanitizeHtml.ts`), so no adapter has to be trusted to do it. An adapter should still escape plain text it puts into the HTML.
+- Everything else (the conversation list, message list, search, deep links, tab sharing) uses the model and `ProcessedMessage`, and never looks inside a source's messages.
+
+The Skype adapter is [`src/sources/skype/`](src/sources/skype/). To support another app, add a folder with an adapter, register it in `src/sources/index.ts` and add its ID to `SourceId`.
+
 ## 🤝 Contributing
 
 Contributions welcome! Please open an issue first to discuss major changes.

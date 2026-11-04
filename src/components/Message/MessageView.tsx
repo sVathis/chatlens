@@ -24,7 +24,7 @@ import {
   useMessageScroll,
   type NavigationScrollLock,
 } from "../../hooks/useMessageScroll";
-import { cleanDisplayName } from "../../utils/displayName";
+import { useSource } from "../../hooks/useSource";
 import { MediaViewer } from "./MediaViewer";
 import { useMediaGallery } from "../../hooks/useMediaGallery";
 import type { MediaItem } from "../../types/messages";
@@ -54,6 +54,7 @@ export function MessageView() {
     getProcessedMessages,
   } = useMessageStore();
   const exportData = useExportData();
+  const source = useSource();
   const conversation = getSelectedConversation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const swapped = conversation ? isRoleSwapped(conversation.id) : false;
@@ -84,19 +85,19 @@ export function MessageView() {
     activeTarget?.status === "pending" ? activeTarget.requestId : null;
 
   const userDisplayName = useMemo(() => {
-    return exportData?.userId
-      ? cleanDisplayName(exportData.userId) || "You"
+    return exportData?.ownerId
+      ? source.displayName(exportData.ownerId) || "You"
       : "You";
-  }, [exportData?.userId]);
+  }, [exportData?.ownerId, source]);
 
   const conversationDisplayName = useMemo(() => {
     if (!conversation?.id) return "";
     return (
-      cleanDisplayName(conversation.displayName) ||
-      cleanDisplayName(conversation.id) ||
+      source.displayName(conversation.title) ||
+      source.displayName(conversation.id) ||
       conversation.id
     );
-  }, [conversation?.displayName, conversation?.id]);
+  }, [conversation?.title, conversation?.id, source]);
 
   const headerTitle = useMemo(
     () => (swapped ? userDisplayName : conversationDisplayName),
@@ -170,7 +171,7 @@ export function MessageView() {
     }
     const required = getRequiredMessageCount(
       targetRawIndex,
-      conversation.MessageList.length,
+      conversation.messages.length,
     );
     setLoadedMessageCount((prev) => Math.max(prev, required));
     setSearchQuery("");
@@ -184,12 +185,13 @@ export function MessageView() {
   const targetResolution = useMemo(() => {
     if (!activeTarget || !conversation || !isProcessedForView) return null;
     return resolveDisplayedMessage(
-      conversation.MessageList,
+      conversation.messages,
       activeTarget.rawIndex,
       processedMessages,
       processedRawCount,
+      source.typeOf,
     );
-  }, [activeTarget, conversation, isProcessedForView, processedMessages, processedRawCount]);
+  }, [activeTarget, conversation, isProcessedForView, processedMessages, processedRawCount, source]);
 
   const targetDisplayId =
     targetResolution && targetResolution.status !== "loading"
@@ -380,7 +382,7 @@ export function MessageView() {
 
   const hasMoreMessages = useMemo(() => {
     if (!conversation) return false;
-    return loadedMessageCount < conversation.MessageList.length;
+    return loadedMessageCount < conversation.messages.length;
   }, [conversation, loadedMessageCount]);
 
   const handleLoadAll = useCallback(() => {
@@ -388,12 +390,12 @@ export function MessageView() {
 
     setIsLoadingAll(true);
     setIsLoadingMore(true);
-    setLoadedMessageCount(conversation.MessageList.length);
+    setLoadedMessageCount(conversation.messages.length);
   }, [conversation, isLoadingAll, isLoadingMore, setLoadedMessageCount]);
 
   useEffect(() => {
     if (isLoadingAll && conversation) {
-      const totalMessages = conversation.MessageList.length;
+      const totalMessages = conversation.messages.length;
       if (loadedMessageCount >= totalMessages) {
         setIsLoadingAll(false);
         setIsLoadingMore(false);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { processMessages } from "../utils/messageProcessor";
+import { processMessages } from "../sources/skype/messageProcessor";
+import { skypeSource } from "../sources/skype";
 import {
   findRawMessageIndex,
   getRequiredMessageCount,
@@ -19,7 +20,13 @@ const raw = conversation.MessageList;
 
 function resolve(messageId: string, swapped = false, rawCount = raw.length) {
   const processed = processMessages(raw, OWNER_ID, swapped, undefined, rawCount);
-  return resolveDisplayedMessage(raw, findRawMessageIndex(raw, messageId), processed, rawCount);
+  return resolveDisplayedMessage(
+    raw,
+    findRawMessageIndex(raw, messageId),
+    processed,
+    rawCount,
+    skypeSource.typeOf,
+  );
 }
 
 describe("findRawMessageIndex / getRequiredMessageCount", () => {
@@ -42,7 +49,9 @@ describe("resolveDisplayedMessage", () => {
   it("reports loading until the processed range covers the target", () => {
     const target = rawIndexFor(10, COUNT); // an old message
     const processed = processMessages(raw, OWNER_ID, false, undefined, 50);
-    expect(resolveDisplayedMessage(raw, target, processed, 50)).toEqual({ status: "loading" });
+    expect(
+      resolveDisplayedMessage(raw, target, processed, 50, skypeSource.typeOf),
+    ).toEqual({ status: "loading" });
   });
 
   it("resolves a normal message exactly, also with swapped roles", () => {
@@ -87,7 +96,7 @@ describe("resolveDisplayedMessage", () => {
   it("never reports a hidden message as found when nothing is displayed", () => {
     const onlyAlbum = [{ ...raw[0], messagetype: "RichText/Media_Album" }];
     const processed = processMessages(onlyAlbum, OWNER_ID, false, undefined, 1);
-    expect(resolveDisplayedMessage(onlyAlbum, 0, processed, 1)).toEqual({
+    expect(resolveDisplayedMessage(onlyAlbum, 0, processed, 1, skypeSource.typeOf)).toEqual({
       status: "hidden",
       displayId: null,
       messageType: "RichText/Media_Album",

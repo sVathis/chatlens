@@ -1,5 +1,5 @@
-import type { MediaMetadata } from "../types/messages";
-import { IMAGE_EXTS, VIDEO_EXTS } from "../constants/media";
+import type { MediaMetadata } from "../../types/messages";
+import { IMAGE_EXTS, VIDEO_EXTS } from "../../constants/media";
 
 const uriObjectPattern =
   /<URIObject[^>]*uri="https:\/\/api\.asm\.skype\.com\/v1\/objects\/([a-zA-Z0-9-]+)"/;
@@ -46,7 +46,8 @@ function isVideoExtension(extension: string): boolean {
   return VIDEO_EXTS.has(extension.toLowerCase());
 }
 
-async function getMediaMetadata(
+/** Reads the `{mediaId}.json` file Skype writes next to each attachment. */
+export async function getMediaMetadata(
   mediaId: string,
   mediaFiles: Map<string, File>,
 ): Promise<MediaMetadata | null> {

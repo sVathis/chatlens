@@ -22,13 +22,13 @@ import {
   IconPhotoVideo,
 } from "@tabler/icons-react";
 import { useState, useRef } from "react";
-import { parseJsonFile, parseDirectoryFiles } from "../../utils/fileParser";
-import type { SkypeExport } from "../../types/messages";
+import { loadExportFolder, loadExportJson } from "../../sources";
+import type { ChatExport } from "../../model/chat";
 import { UPLOAD_WIDTH } from "../../constants/fileUpload";
 import { debugLog } from "../../utils/debug";
 
 interface FileUploadProps {
-  onFileProcessed: (data: SkypeExport) => void;
+  onFileProcessed: (data: ChatExport) => void;
   /** Shown above the upload options, e.g. to explain a pending deep link. */
   notice?: React.ReactNode;
 }
@@ -56,13 +56,13 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
     setFileName(file.name);
 
     try {
-      // parseJsonFile handles both small and large files automatically
+      // loadExportJson handles both small and large files automatically
       // For large files (>100MB), it uses streaming to avoid memory issues.
       // It also validates the structure and accepts single extracted conversations.
-      const data = await parseJsonFile(file, setProgress);
+      const data = await loadExportJson(file, setProgress);
 
       debugLog("[FileUpload] File processed successfully:", {
-        userId: data.userId,
+        ownerId: data.ownerId,
         conversations: data.conversations.length,
       });
 
@@ -84,12 +84,12 @@ export function FileUpload({ onFileProcessed, notice }: FileUploadProps) {
     setFileName("Skype Export Directory");
 
     try {
-      // parseDirectoryFiles extracts messages.json and builds a map of media files
+      // loadExportFolder reads the export (e.g. messages.json) and builds a map of media files
       // Media files are indexed by their ID for efficient lookup during message rendering
-      const data = await parseDirectoryFiles(Array.from(files), setProgress);
+      const data = await loadExportFolder(Array.from(files), setProgress);
 
       debugLog("[FileUpload] Directory processed successfully:", {
-        userId: data.userId,
+        ownerId: data.ownerId,
         conversations: data.conversations.length,
         mediaFiles: data.mediaFiles?.size || 0,
       });
