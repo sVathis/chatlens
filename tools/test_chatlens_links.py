@@ -3,6 +3,8 @@
 import argparse
 import json
 import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -188,6 +190,26 @@ class LegacyNameTests(unittest.TestCase):
         # The tab the app looks for, whatever the old constant is called
         self.assertEqual(skypelens_links.SKYPELENS_WINDOW_NAME, "chatlens")
         self.assertIs(skypelens_links.finding_links_html, finding_links_html)
+
+    def test_old_module_imports_from_the_repository_root(self):
+        # As tools.skypelens_links, which worked before the rename: tools/ is not on sys.path
+        root = Path(__file__).resolve().parent.parent
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import tools.skypelens_links as m; "
+                "print(m.build_skypelens_url('8:live:a', '1'), m.SKYPELENS_WINDOW_NAME)",
+            ],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.split(),
+            [build_chatlens_url("8:live:a", "1"), "chatlens"],
+        )
 
     def test_old_add_links_stores_both_fields(self):
         [finding] = skypelens_links.add_skypelens_links(

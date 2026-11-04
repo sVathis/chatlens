@@ -16,8 +16,14 @@ import argparse
 import sys
 from typing import Any, Iterable, MutableMapping, Optional
 
-import chatlens_links
-from chatlens_links import *  # noqa: F401,F403  (the whole public API, under the same names)
+try:
+    # Imported as tools.skypelens_links, e.g. from the repository root
+    from . import chatlens_links
+    from .chatlens_links import *  # noqa: F401,F403  (the whole public API, same names)
+except ImportError:
+    # Imported as skypelens_links (tools/ on sys.path), or run as a script
+    import chatlens_links
+    from chatlens_links import *  # noqa: F401,F403
 
 DEFAULT_SKYPELENS_BASE_URL = chatlens_links.DEFAULT_CHATLENS_BASE_URL
 SKYPELENS_BASE_URL_ENV = chatlens_links.LEGACY_BASE_URL_ENV

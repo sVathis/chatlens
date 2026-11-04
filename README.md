@@ -178,7 +178,7 @@ html_links = finding_links_html(finding)          # report.html
 markdown_links = finding_links_markdown(finding)  # report.md
 ```
 
-**Coming from SkypeLens?** The project was renamed, and `tools/skypelens_links.py` stays as an alias of `chatlens_links.py`, so existing `from skypelens_links import …` code keeps working with its old function names and `args.skypelens_*` attributes. Both spellings of the command-line flags and of the `*_BASE_URL` environment variable are accepted, and reports that stored `skypelens_url` still render. Reports made before the rename still open their links in a tab named `skypelens`, which ChatLens treats like `chatlens`. Switch to the new names when convenient: new reports use `chatlens`.
+**Coming from SkypeLens?** The project was renamed, and `tools/skypelens_links.py` stays as an alias of `chatlens_links.py`, so existing `from skypelens_links import …` code keeps working with its old function names and `args.skypelens_*` attributes. It works as `skypelens_links` (with `tools/` on the path) and as `tools.skypelens_links` from the repository root; copy both files if you copy it elsewhere. Both spellings of the command-line flags and of the `*_BASE_URL` environment variable are accepted, and reports that stored `skypelens_url` still render. Reports made before the rename still open their links in a tab named `skypelens`, which ChatLens treats like `chatlens`. Switch to the new names when convenient: new reports use `chatlens`.
 
 Write `chatlens_url` to `findings.json`/`findings.csv` too if you want it there. `resolve_conversation_id` accepts a full export, an extracted single-conversation JSON, a bare conversation object or a list of messages (via their `conversationid` field).
 
