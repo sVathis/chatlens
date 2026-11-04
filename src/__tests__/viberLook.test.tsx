@@ -20,7 +20,9 @@ const revokeObjectURL = URL.revokeObjectURL;
 const play = HTMLMediaElement.prototype.play;
 const pause = HTMLMediaElement.prototype.pause;
 const pausedProperty = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "paused")!;
+const currentTimeProperty = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "currentTime")!;
 const playing = new WeakSet<HTMLMediaElement>();
+const positions = new WeakMap<HTMLMediaElement, number>();
 
 beforeAll(() => {
   (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = false;
@@ -32,6 +34,15 @@ beforeAll(() => {
     configurable: true,
     get(this: HTMLMediaElement) {
       return !playing.has(this);
+    },
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, "currentTime", {
+    configurable: true,
+    get(this: HTMLMediaElement) {
+      return positions.get(this) ?? 0;
+    },
+    set(this: HTMLMediaElement, value: number) {
+      positions.set(this, value);
     },
   });
   HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
@@ -51,6 +62,7 @@ afterAll(() => {
   HTMLMediaElement.prototype.play = play;
   HTMLMediaElement.prototype.pause = pause;
   Object.defineProperty(HTMLMediaElement.prototype, "paused", pausedProperty);
+  Object.defineProperty(HTMLMediaElement.prototype, "currentTime", currentTimeProperty);
 });
 beforeEach(() => {
   useMessageStore.setState(initialState, true);
@@ -68,8 +80,10 @@ const MEDIA_PATHS = [
   "media/stickers/00040103.png",
 ];
 
-function loadExport(): ChatExport {
-  const chat = viberSource.fromJson(structuredClone(sample) as unknown as ViberExport);
+function loadExport(change?: (data: ViberExport) => void): ChatExport {
+  const data = structuredClone(sample) as unknown as ViberExport;
+  change?.(data);
+  const chat = viberSource.fromJson(data);
   chat.mediaFiles = new Map(MEDIA_PATHS.map((p) => [p, new File(["x"], p.split("/").pop()!)]));
   return chat;
 }
@@ -84,8 +98,12 @@ async function openChat(id: string, lastMessageId: string) {
 }
 
 /** Every message of a chat as bubbles, without the virtualised list (so all are rendered). */
-function renderBubbles(conversationId: string, isGroup: boolean) {
-  const chat = loadExport();
+function renderBubbles(
+  conversationId: string,
+  isGroup: boolean,
+  change?: (data: ViberExport) => void,
+) {
+  const chat = loadExport(change);
   useMessageStore.getState().setExportData(chat);
   const conversation = chat.conversations.find((c) => c.id === conversationId)!;
   const messages = processForDisplay(
@@ -242,6 +260,26 @@ describe("a Viber direct chat", () => {
     await waitFor(() => button.getAttribute("aria-label") === "Play voice message", "paused");
   });
 
+  it("can be sought with the keyboard: the seek bar is a range input with a value text", async () => {
+    renderBubbles(DIRECT, false);
+    await waitFor(() => bubble("106") !== null, "the bubbles");
+    await waitFor(() => bubble("106").querySelector("[data-voice-player]") !== null, "the player");
+    const seek = bubble("106").querySelector<HTMLInputElement>("input[type='range']")!;
+    // A native range input is focusable and answers arrow keys, Home and End by itself
+    expect(seek.getAttribute("aria-label")).toBe("Seek voice message");
+    expect(seek.disabled).toBe(false);
+    expect(seek.max).toBe("14");
+    expect(seek.getAttribute("aria-valuetext")).toBe("0:00 of 0:14");
+
+    const audio = bubble("106").querySelector("audio")!;
+    // What the browser does for an arrow key or a drag: it changes the value and says so
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    setValue.call(seek, "5");
+    seek.dispatchEvent(new Event("input", { bubbles: true }));
+    await waitFor(() => audio.currentTime === 5, "the seek");
+    await waitFor(() => seek.getAttribute("aria-valuetext") === "0:05 of 0:14", "the new value text");
+  });
+
   it("shows a missing voice message as a note, not as a player", async () => {
     renderBubbles(DIRECT, false);
     await waitFor(() => bubble("117") !== null, "the bubbles");
@@ -266,6 +304,58 @@ describe("a Viber direct chat", () => {
     const card = rowOf("107")!.querySelector<HTMLAnchorElement>("[data-file-card]")!;
     expect(card.textContent).toContain("Quarterly report.pdf");
     expect(card.hasAttribute("download")).toBe(true);
+  });
+});
+
+describe("context that must survive on every kind of message", () => {
+  it("shows that a photo or video was forwarded, and what it replies to", async () => {
+    renderBubbles(DIRECT, false, (data) => {
+      const chat = data.chats.find((c) => c.id === 10)!;
+      const photo = chat.messages.find((m) => m.id === 104)!;
+      photo.forwarded = true;
+      const clip = chat.messages.find((m) => m.id === 105)!;
+      clip.replyTo = { text: "Hello there", messageId: 101 };
+    });
+    await waitFor(() => bubble("104") !== null, "the bubbles");
+    await waitFor(() => bubble("104").querySelector("img") !== null, "the photo");
+    await waitFor(() => bubble("105").querySelector("img, video") !== null, "the video");
+
+    // Forwarded: the note is above the picture, and the picture is still there
+    const note = bubble("104").querySelector("[data-forwarded]")!;
+    expect(note.textContent).toBe("Forwarded");
+    const photo = bubble("104").querySelector("img")!;
+    expect(note.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bubble("104").querySelector("[data-quote]")).toBeNull();
+
+    // A reply: the quote is above the video, and points at the message it quotes
+    const quote = bubble("105").querySelector<HTMLElement>("[data-quote]")!;
+    expect(quote.textContent).toBe("Hello there");
+    expect(quote.getAttribute("data-quote-id")).toBe("101");
+    expect(quote.getAttribute("role")).toBe("button");
+    const video = bubble("105").querySelector("img, video")!;
+    expect(quote.compareDocumentPosition(video) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bubble("105").querySelector("[data-forwarded]")).toBeNull();
+  });
+
+  it("shows the reactions to a call and to a system message under their pills", async () => {
+    renderBubbles(DIRECT, false, (data) => {
+      const chat = data.chats.find((c) => c.id === 10)!;
+      chat.messages.find((m) => m.id === 113)!.reactions = { others: { "2": 1 } };
+      chat.messages.find((m) => m.id === 115)!.reactions = { others: { "3": 2 } };
+    });
+    await waitFor(() => bubble("113") !== null, "the bubbles");
+
+    const call = bubble("113");
+    expect(call.querySelector("[data-center-pill]")?.textContent).toContain("Call");
+    expect(call.querySelector("[data-reactions]")?.getAttribute("aria-label")).toBe(
+      "Reactions: \u{2764}\u{FE0F} 1",
+    );
+    const pill = call.querySelector("[data-center-pill]")!;
+    const chips = call.querySelector("[data-reactions]")!;
+    expect(pill.compareDocumentPosition(chips) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bubble("115").querySelector("[data-reactions]")?.getAttribute("aria-label")).toBe(
+      "Reactions: \u{1F602} 2",
+    );
   });
 });
 

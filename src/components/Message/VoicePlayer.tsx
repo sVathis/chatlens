@@ -1,4 +1,4 @@
-import { ActionIcon, Box, Group, Text } from "@mantine/core";
+import { ActionIcon, Group, Text } from "@mantine/core";
 import { IconPlayerPauseFilled, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 
@@ -16,7 +16,7 @@ interface VoicePlayerProps {
 }
 
 /**
- * A voice message as a play button, a progress bar (click to seek) and the time left.
+ * A voice message as a play button, a seek bar and the time.
  * The sound itself comes from a hidden audio element playing the file from the export.
  */
 export function VoicePlayer({ url, durationMs, accent }: VoicePlayerProps) {
@@ -35,16 +35,12 @@ export function VoicePlayer({ url, durationMs, accent }: VoicePlayerProps) {
     }
   };
 
-  const seek = (event: React.MouseEvent<HTMLDivElement>) => {
+  const seek = (event: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
     if (!audio || !(length > 0)) return;
-    const box = event.currentTarget.getBoundingClientRect();
-    const fraction = box.width > 0 ? (event.clientX - box.left) / box.width : 0;
-    audio.currentTime = Math.min(1, Math.max(0, fraction)) * length;
+    audio.currentTime = Math.min(length, Math.max(0, Number(event.target.value)));
     setPosition(audio.currentTime);
   };
-
-  const progress = length > 0 ? Math.min(100, (position / length) * 100) : 0;
 
   return (
     <Group gap={8} wrap="nowrap" data-voice-player style={{ minWidth: 190 }}>
@@ -58,20 +54,20 @@ export function VoicePlayer({ url, durationMs, accent }: VoicePlayerProps) {
       >
         {playing ? <IconPlayerPauseFilled size={16} /> : <IconPlayerPlayFilled size={16} />}
       </ActionIcon>
-      <Box
-        onClick={seek}
+      {/* A native range input: arrow keys, Home/End and Page Up/Down seek, and screen readers announce it */}
+      <input
+        type="range"
         data-voice-progress
-        style={{
-          flex: 1,
-          height: 6,
-          borderRadius: 3,
-          cursor: "pointer",
-          background: "rgba(127, 127, 127, 0.3)",
-          overflow: "hidden",
-        }}
-      >
-        <Box style={{ width: `${progress}%`, height: "100%", background: accent }} />
-      </Box>
+        aria-label="Seek voice message"
+        aria-valuetext={`${clock(position)} of ${clock(length)}`}
+        min={0}
+        max={length > 0 ? length : 1}
+        step={0.1}
+        value={Math.min(position, length > 0 ? length : 0)}
+        disabled={!(length > 0)}
+        onChange={seek}
+        style={{ flex: 1, minWidth: 0, accentColor: accent, cursor: length > 0 ? "pointer" : "default" }}
+      />
       <Text size="xs" style={{ fontVariantNumeric: "tabular-nums", minWidth: 32 }}>
         {clock(playing || position > 0 ? position : length)}
       </Text>

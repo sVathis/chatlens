@@ -10,6 +10,7 @@ import { MediaMessage } from "./MediaMessage";
 import type { MessageBubbleProps } from "./MessageBubble";
 import { ContactLine, ForwardedNote, LinkCard, LocationLine, QuoteBlock } from "./MessageParts";
 import { ReactionChips } from "./ReactionChips";
+import type { Reaction } from "../../model/chat";
 
 const AVATAR_SIZE = 32;
 
@@ -39,12 +40,14 @@ function CenterPill({
   timestamp,
   html,
   prefix,
+  reactions,
 }: {
   children?: React.ReactNode;
   copyLink: React.ReactNode;
   timestamp?: string;
   html?: string;
   prefix?: string;
+  reactions?: Reaction[];
 }) {
   return (
     <Box ta="center" py={10} px={16}>
@@ -72,6 +75,7 @@ function CenterPill({
         )}
         {copyLink}
       </Box>
+      {reactions && <ReactionChips reactions={reactions} />}
       {timestamp && (
         <Text size="xs" c="dimmed" mt={2} opacity={0.7}>
           {formatClockTime(timestamp)}
@@ -109,13 +113,16 @@ export function ViberMessageBubble({
     ) : null;
 
   if (message.type === "system" || message.type === "notice") {
-    return <CenterPill html={highlighted} copyLink={copyLink("end")} />;
+    return (
+      <CenterPill html={highlighted} copyLink={copyLink("end")} reactions={message.reactions} />
+    );
   }
   if (message.type === "call") {
     return (
       <CenterPill
         html={highlighted}
         prefix={"\u{1F4DE} "}
+        reactions={message.reactions}
         timestamp={showTimestamp ? message.timestamp : undefined}
         copyLink={copyLink("end")}
       />
@@ -159,6 +166,12 @@ export function ViberMessageBubble({
   if (message.type === "media" && message.mediaUrl) {
     content = (
       <Box pos="relative" maw="100%" data-viber-media>
+        {message.forwarded && <ForwardedNote />}
+        {message.quote && (
+          <Box maw={400}>
+            <QuoteBlock quote={message.quote} />
+          </Box>
+        )}
         <MediaMessage
           mediaId={message.mediaUrl}
           messageId={message.id}
