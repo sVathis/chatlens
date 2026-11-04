@@ -32,6 +32,12 @@ export function formatMessageTime(dateString: string): string {
   return `${day}<sup>${getOrdinalSuffix(day)}</sup> ${MONTH_FORMATTER.format(date)} ${date.getFullYear()}, ${TIME_FORMATTER.format(date)}`;
 }
 
+/** The time of day only (for looks that show the date as a separate row). */
+export function formatClockTime(dateString: string): string {
+  const date = new Date(dateString);
+  return Number.isNaN(date.getTime()) ? "" : TIME_FORMATTER.format(date);
+}
+
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const diff = Date.now() - date.getTime();

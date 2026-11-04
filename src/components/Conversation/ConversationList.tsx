@@ -1,4 +1,4 @@
-import { Stack, UnstyledButton, Text, Group, Badge } from "@mantine/core";
+import { Avatar, Stack, UnstyledButton, Text, Group, Badge } from "@mantine/core";
 import { memo, useMemo, useState } from "react";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import {
@@ -8,6 +8,8 @@ import {
 } from "../../store/messageStore";
 import { useOpenConversation } from "../../hooks/useDeepLinkNavigation";
 import { useSource } from "../../hooks/useSource";
+import { useLook } from "../../look";
+import { avatarColor, initials } from "../../look/avatar";
 import { conversationLabel } from "../../utils/conversationLabel";
 import { formatRelativeTime } from "../../utils/dateFormat";
 import type { ChatConversation } from "../../model/chat";
@@ -30,6 +32,7 @@ const ConversationItem = memo(function ConversationItem({
 	source: SourceAdapter;
 	onSelect: (id: string) => void;
 }) {
+	const look = useLook();
 	const messageCount = conversation.messages.length;
 	const preview = source.preview(conversation.messages, ownerId);
 	const label = conversationLabel(conversation);
@@ -43,23 +46,35 @@ const ConversationItem = memo(function ConversationItem({
 			data-conversation-id={conversation.id}
 			px="md"
 			py="sm"
-			bg={isSelected ? "light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6))" : undefined}
+			bg={isSelected ? look.selectedRow : undefined}
 			style={{
 				borderRadius: "var(--mantine-radius-md)",
 				transition: "background-color 150ms ease",
-				borderLeft: isSelected ? "3px solid #0078d4" : "3px solid transparent",
+				borderLeft: isSelected ? `3px solid ${look.accent}` : "3px solid transparent",
 			}}
 			styles={{
 				root: {
 					"&:hover": {
 						backgroundColor: isSelected
-							? "light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6))"
+							? look.selectedRow
 							: "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-5))",
 					},
 				},
 			}}
 		>
-			<Stack gap="xs">
+			<Group gap="sm" wrap="nowrap" align="flex-start">
+			{look.groupAvatars && (
+				<Avatar
+					size={36}
+					radius="xl"
+					color="white"
+					data-conversation-avatar
+					styles={{ root: { background: avatarColor(conversation.id), flexShrink: 0 } }}
+				>
+					{initials(displayName)}
+				</Avatar>
+			)}
+			<Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
 				<Group justify="space-between" wrap="nowrap" gap="xs">
 					<Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
 						<Text 
@@ -103,6 +118,7 @@ const ConversationItem = memo(function ConversationItem({
 					</Text>
 				)}
 			</Stack>
+			</Group>
 		</UnstyledButton>
 	);
 });

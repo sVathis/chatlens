@@ -116,6 +116,7 @@ function processMessage(
       const stickerPath = message.sticker?.path;
       if (hasMedia(stickerPath, mediaFiles)) {
         shown.type = "media";
+        shown.sticker = true;
         shown.mediaUrl = mediaKey(stickerPath);
       } else {
         shown.content = "<em>Sticker</em>";

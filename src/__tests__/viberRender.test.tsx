@@ -137,7 +137,9 @@ describe("Viber messages on screen", () => {
     await waitFor(() => bubble("106") !== null, "the bubbles");
     await waitFor(() => bubble("106").querySelector("audio") !== null, "the audio player");
     const audio = bubble("106").querySelector("audio")!;
-    expect(audio.hasAttribute("controls")).toBe(true);
+    // Viber's look has its own play button; the audio element is only the sound
+    expect(audio.hasAttribute("controls")).toBe(false);
+    expect(bubble("106").querySelector("[data-voice-player] button")).not.toBeNull();
     expect(audio.getAttribute("src")).toContain("voice_Alice Example.m4a");
 
     expect(bubble("117").querySelector("audio")).toBeNull();

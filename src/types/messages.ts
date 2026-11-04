@@ -32,6 +32,8 @@ export interface ProcessedMessage {
   contactCard?: { name?: string; number?: string };
   edited?: boolean;
   forwarded?: boolean;
+  /** A sticker: its image is shown without a bubble around it. */
+  sticker?: boolean;
 }
 
 export interface MediaMetadata {

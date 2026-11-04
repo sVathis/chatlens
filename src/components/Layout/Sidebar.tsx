@@ -4,6 +4,7 @@ import { IconChevronLeft, IconChevronRight, IconSearch, IconX, IconBrandGithub }
 import { ColorSchemeToggle } from "../ColorSchemeToggle/ColorSchemeToggle";
 import { ConversationList } from "../Conversation/ConversationList";
 import { useConversations } from "../../store/messageStore";
+import { useLook } from "../../look";
 
 interface SidebarProps {
 	navbarCollapsed: boolean;
@@ -12,6 +13,7 @@ interface SidebarProps {
 
 export function Sidebar({ navbarCollapsed, toggleNavbar }: SidebarProps) {
 	const conversations = useConversations();
+	const look = useLook();
 	const [searchQuery, setSearchQuery] = useState("");
 
 	return (
@@ -68,7 +70,7 @@ export function Sidebar({ navbarCollapsed, toggleNavbar }: SidebarProps) {
 							backgroundColor: "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))",
 							border: "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))",
 							"&:focus": {
-								borderColor: "#0078d4",
+								borderColor: look.accent,
 							},
 						},
 					}}

@@ -5,6 +5,7 @@ import { useSource } from "../../hooks/useSource";
 import type { MediaMetadata } from "../../types/messages";
 import { MediaViewer } from "./MediaViewer";
 import { useMediaNavigation } from "../../hooks/useMediaGallery";
+import { useLook } from "../../look";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 import { revokeObjectUrl } from "../../utils/urlManager";
 import {
@@ -21,11 +22,15 @@ interface MediaMessageProps {
   /** The message it is in: what tells two messages with the same file apart in the gallery. */
   messageId: string;
   isOwner: boolean;
+  /** A sticker: shown without a bubble behind it. */
+  sticker?: boolean;
 }
 
-export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps) {
+export function MediaMessage({ mediaId, messageId, isOwner, sticker = false }: MediaMessageProps) {
   const { exportData } = useMessageStore();
   const { media } = useSource();
+  const look = useLook();
+  const bubbleBg = sticker ? "transparent" : isOwner ? look.mediaOwn : look.mediaOther;
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<MediaMetadata | null>(null);
@@ -170,11 +175,11 @@ export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps)
         px="md"
         py="sm"
         radius="lg"
-        bg={isOwner ? "#0078d4" : "dark.5"}
+        bg={bubbleBg}
         style={paperBaseStyle}
       >
         <Center p="xl">
-          <Loader size="sm" color={isOwner ? "white" : "blue"} />
+          <Loader size="sm" color={isOwner ? "white" : look.id === "viber" ? look.accent : "blue"} />
         </Center>
       </Paper>
     );
@@ -186,7 +191,7 @@ export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps)
         px="md"
         py="sm"
         radius="lg"
-        bg={isOwner ? "#0078d4" : "dark.5"}
+        bg={bubbleBg}
         style={paperBaseStyle}
       >
         <Text size="sm" c={isOwner ? "white" : "dimmed"}>
@@ -225,9 +230,9 @@ export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps)
     <>
       <Box display="contents">
         <Paper
-          p={4}
+          p={sticker ? 0 : 4}
           radius="lg"
-          bg={isOwner ? "#0078d4" : "dark.5"}
+          bg={bubbleBg}
           style={MEDIA_PAPER_STYLE}
           onClick={handleOpenViewer}
         >
@@ -287,9 +292,9 @@ export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps)
       <>
         <Box display="contents">
           <Paper
-            p={4}
+            p={sticker ? 0 : 4}
             radius="lg"
-            bg={isOwner ? "#0078d4" : "dark.5"}
+            bg={bubbleBg}
             style={{ ...MEDIA_PAPER_STYLE, position: "relative" }}
             onClick={handleOpenViewer}
           >
@@ -343,7 +348,7 @@ export function MediaMessage({ mediaId, messageId, isOwner }: MediaMessageProps)
       px="md"
       py="sm"
       radius="lg"
-      bg={isOwner ? "#0078d4" : "dark.5"}
+      bg={bubbleBg}
       style={paperBaseStyle}
     >
       <a

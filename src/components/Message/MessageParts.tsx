@@ -1,5 +1,7 @@
 import { Box, Text } from "@mantine/core";
 import type { ProcessedMessage } from "../../types/messages";
+import { useLook } from "../../look";
+import { useMessageStore } from "../../store/messageStore";
 
 /** The "Forwarded" note above a message that was forwarded from elsewhere. */
 export function ForwardedNote() {
@@ -12,9 +14,21 @@ export function ForwardedNote() {
 
 /**
  * The message this one replies to, as a quote inside the bubble. Its text is plain text
- * (React escapes it), cut to a few lines.
+ * (React escapes it), cut to a few lines. When the quoted message is in the conversation,
+ * clicking the quote (or pressing Enter on it) scrolls to that message.
  */
 export function QuoteBlock({ quote }: { quote: NonNullable<ProcessedMessage["quote"]> }) {
+  const look = useLook();
+  const conversationId = useMessageStore((state) => state.selectedConversationId);
+  const targetId = quote.messageId;
+  const jump =
+    targetId && conversationId
+      ? () =>
+          useMessageStore
+            .getState()
+            .requestNavigation({ conversationId, messageId: targetId })
+      : undefined;
+
   return (
     <Box
       data-quote
@@ -22,10 +36,25 @@ export function QuoteBlock({ quote }: { quote: NonNullable<ProcessedMessage["quo
       mb={6}
       px={8}
       py={4}
+      role={jump ? "button" : undefined}
+      tabIndex={jump ? 0 : undefined}
+      aria-label={jump ? "Go to the quoted message" : undefined}
+      onClick={jump}
+      onKeyDown={
+        jump
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                jump();
+              }
+            }
+          : undefined
+      }
       style={{
-        borderLeft: "3px solid currentColor",
+        borderLeft: `3px solid ${look.quoteBar}`,
         borderRadius: 4,
         background: "rgba(127, 127, 127, 0.18)",
+        cursor: jump ? "pointer" : undefined,
       }}
     >
       <Text size="xs" lineClamp={3} style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>

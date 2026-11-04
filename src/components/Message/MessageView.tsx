@@ -38,6 +38,7 @@ import {
 } from "../../utils/messageLocator";
 import { buildDeepLinkUrl } from "../../utils/deepLink";
 import { copyText } from "../../utils/clipboard";
+import { useLook } from "../../look";
 
 const EMPTY_STATE_STYLE: React.CSSProperties = {
   backgroundColor:
@@ -55,6 +56,7 @@ export function MessageView() {
   } = useMessageStore();
   const exportData = useExportData();
   const source = useSource();
+  const look = useLook();
   const conversation = getSelectedConversation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const swapped = conversation ? isRoleSwapped(conversation.id) : false;
@@ -492,7 +494,7 @@ export function MessageView() {
         data-message-scroll-container
         h="100%"
         style={{ overflow: "auto", position: "relative" }}
-        bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))"
+        bg={look.chatBackground}
       >
         {pendingRequestId !== null && (
           // Zero-height sticky wrapper: visible on top without shifting the rows
@@ -511,6 +513,7 @@ export function MessageView() {
           messages={processedMessages}
           isLoadingMore={isLoadingMore}
           isRoleSwapped={swapped}
+          isGroup={conversation.kind === "group" || conversation.kind === "community"}
           userDisplayName={userDisplayName}
           scrollContainerRef={scrollContainerRef}
           searchQuery={searchQuery}
